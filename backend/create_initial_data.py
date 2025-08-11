@@ -1,6 +1,5 @@
 from flask import current_app as app
 from flask_security import SQLAlchemyUserDatastore, hash_password
-
 from backend.models import db, Product, Party, Coil, Sale, SaleItem, SaleCoil
 from datetime import datetime
 
@@ -21,11 +20,10 @@ with app.app_context():
     # Example Products
     if not Product.query.filter_by(make="JSW").first():
         prod1 = Product(make="JSW", type="Coloron", color="Silver", rate=50.0)
-        
         db.session.add(prod1)
         db.session.commit()
 
-    ''''# Example Party
+    # Example Party
     if not Party.query.filter_by(name="Kumar SV").first():
         party = Party(name="Kumar SV", phone="9876543210")
         db.session.add(party)
@@ -35,21 +33,17 @@ with app.app_context():
 
 
     # Example Coils for the purchase
-    coil1 = Coil(coil_number="C001", purchase_date=datetime.now(), supplier_name="Steel Traders", total_weight=5000, purchase_price=250000)
-    db.session.add(coil1)
-    db.session.commit()
+    if not Coil.query.filter_by(coil_number="C001").first():
+        coil1 = Coil(coil_number="C001", make="JSW", type="Coloron", color="Silver", purchase_date=datetime.now(), supplier_name="Steel Traders", total_weight=5000, purchase_price=250000)
+        db.session.add(coil1)
+        db.session.commit()
+    else:
+        coil = Coil.query.filter_by(coil_number="C001").first()
+
+
 
     # Example Sale
-    sale = Sale(
-        date=datetime.now(),
-        party_id=party.id,
-        product_id=prod1.id,
-        total_amount=2000  # (for now, set directly)
-    )
-    db.session.add(sale)
-    db.session.commit()
-
-    # Example Sale Items (length x qty)
+    '''# Example Sale Items (length x qty)
     items = [
     {"length": 22.0, "quantity": 10, "is_custom": False},
     {"length": 18.0, "quantity": 10, "is_custom": False},
@@ -79,6 +73,6 @@ with app.app_context():
     sale_coil1 = SaleCoil(sale_id=sale.id, coil_number=coil1.coil_number)
     
     db.session.add(sale_coil1)
-    db.session.commit()
-'''
+    db.session.commit()'''
+
     print("✅ Initial data populated successfully.")

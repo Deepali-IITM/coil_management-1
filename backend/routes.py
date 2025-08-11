@@ -152,3 +152,80 @@ def delete_product(id):
     db.session.commit()
     return jsonify({"message": "product deleted successfully"})
 
+
+@app.route("/api/coils", methods=["GET", "POST"])
+@auth_required("token")
+
+def manage_coils():
+    if request.method == "GET":
+        coils = Coil.query.all()
+        return jsonify([
+            {"id": s.id, "coil_number":s.coil_number, "supplier_name":s.supplier_name,
+             "total_weight":s.total_weight,"purchase_price":s.purchase_price,
+             "make": s.make, "type": s.type, "color": s.color, "purchase_date": s.purchase_date}
+            for s in coils
+        ])
+
+    elif request.method == "POST":
+        
+        data = request.json
+        if not data.get("coil_number"):
+            return jsonify({"message": "coil_number is necessary"}), 400
+        
+        new_coil = Coil(
+                coil_number=data["coil_number"],
+                supplier_name=data["supplier_name"],
+                total_weight=data["total_weight"],
+                purchase_price=data["purchase_price"],
+                make=data["make"],
+                type=data["type"],
+                color=data["color"],
+                purchase_date=data["purchase_date"]    
+        )
+        db.session.add(new_coil)
+        db.session.commit()
+        return jsonify({"message": "new coil created successfully"}), 201
+
+
+@app.route("/api/update/coil/<int:id>", methods=["GET","POST"])
+@auth_required("token")
+@roles_required("admin")
+def update_coil(id):
+    coil = Coil.query.get_or_404(id)
+
+    if request.method == "GET":
+        return jsonify({
+            "id": coil.id,
+            "make": coil.make,
+            "type": coil.type,
+            "color": coil.color,
+            "purchase_date": coil.purchase_date,
+            "coil_number":coil.coil_number,
+            "supplier_name":coil.supplier_name,
+            "total_weight":coil.total_weight,
+            "purchase_price":coil.purchase_price,
+
+        })
+
+    elif request.method == "POST":
+        data = request.json
+        coil.make = data["make"]
+        coil.type = data["type"]
+        coil.color = data["color"]
+        coil.purchase_price= data["purchase_price"]
+        coil.coil_number=data["coil_number"]
+        coil.supplier_name=data["supplier_name"]
+        coil.total_weight=data["total_weight"]
+        coil.purchase_date=data["purchase_date"]
+        db.session.commit()
+        return jsonify({"message": "product updated successfully"})
+
+
+@app.route("/delete/coil/<int:id>", methods=["DELETE"])
+@auth_required("token")
+@roles_required("admin")
+def delete_coil(id):
+    coil = Coil.query.get_or_404(id)
+    db.session.delete(coil)
+    db.session.commit()
+    return jsonify({"message": "product deleted successfully"})

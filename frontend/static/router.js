@@ -8,6 +8,9 @@ import Products from "./components/product_info.js";
 import Sales from "./components/sale.js";
 import ProductForm from "./components/productform.js";
 import UpdateProductForm from "./components/updateproductform.js";
+import CoilForm from "./components/coilform.js";
+import SaleOrder from "./components/saleorder.js";
+import UpdateCoilForm from "./components/updatecoilform.js";
 
 
 const routes = [
@@ -20,7 +23,10 @@ const routes = [
     { path: '/product_info', component: Products},
     { path: '/sales', component: Sales},
     { path: "/create-product", component:ProductForm},
-    { path:"/update-product", component:UpdateProductForm}
+    { path:"/update-product", component:UpdateProductForm},
+    { path:"/create-coil", component:CoilForm},
+    { path:"/update-coil", component:UpdateCoilForm},
+    { path:"/create-sale-order", component:SaleOrder},
 
 ];
 

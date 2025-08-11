@@ -6,6 +6,8 @@ export default {
         <!--Add product Button -->
         <div class="text-center mb-3">
             <button class="btn btn-outline-success" @click="goToCreateproduct">+ Add new product</button>
+            <button class="btn btn-outline-success" @click="goToCreatecoil">+ Add new coil</button>
+            <button class="btn btn-outline-success" @click="goToCreatesaleorder"> + new sale order</button>
         </div>
 
         <!--products List -->
@@ -75,6 +77,13 @@ export default {
         goToCreateproduct() {
             this.$router.push("/create-product");
         },
+        goToCreatecoil() {
+            this.$router.push("/create-coil");
+        },
+        goToCreatesaleorder() {
+            this.$router.push("/create-sale-order");
+        },
+
 
         // ✅ Navigate to the "Update product" Page
         updateproduct(productId) {

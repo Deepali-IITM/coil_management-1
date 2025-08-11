@@ -64,7 +64,10 @@ class Coil(db.Model):
     supplier_name = db.Column(db.String)
     total_weight = db.Column(db.Float)
     purchase_price = db.Column(db.Float)
-    purchase_date = db.Column(db.DateTime, default=datetime.now)
+    make = db.Column(db.String)
+    type = db.Column(db.String)
+    color = db.Column(db.String)
+    purchase_date = db.Column(db.String, default=datetime.now)
     
 
 class Party(db.Model):
@@ -79,6 +82,10 @@ class Product(db.Model):
     type = db.Column(db.String)
     color = db.Column(db.String)
     rate = db.Column(db.Float)
+
+    coil_id=db.Column(db.String, db.ForeignKey('coil.id'))
+
+    coil=db.relationship('Coil', backref=db.backref('coil', lazy='dynamic'))
 
 
 # ---------------------------

@@ -18,7 +18,7 @@ export default {
                     </li>
 
                     <li class="nav-item" v-if="role === 'admin'">
-                        <router-link class="nav-link" to="/all-product-request">products info</router-link>
+                        <router-link class="nav-link" to="/coil_info">coil info</router-link>
                     </li>
 
                     <!-- New product Summary Link -->
