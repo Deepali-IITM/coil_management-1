@@ -6,9 +6,10 @@ from datetime import datetime
 from flask_restful import marshal, fields
 import flask_excel as excel
 from celery.result import AsyncResult
-#from backend.celery.tasks import add, create_csv
+from sqlalchemy.orm import joinedload
+from backend.celery.tasks import create_csv
 
-from backend.models import User,db,Coil, Party, Sale, Product
+from backend.models import SaleCoil, SaleItem, User,db,Coil, Party, Sale, Product
 
 datastore = app.security.datastore
 cache=app.cache
@@ -18,7 +19,7 @@ cache=app.cache
 @cache.cached(timeout=3)
 def cache():
     return {'time':str(datetime.now())}
-'''
+
 @app.get('/celery')
 def celery():
     task = add.delay(10, 30)
@@ -37,7 +38,7 @@ def getData(id):
 @app.get('/create_csv')
 def createCSV():
     task=create_csv.delay(2)
-    return {'task_id': task.id},200'''
+    return {'task_id': task.id},200
 
 
 @app.get('/get_csv/<id>')
@@ -50,6 +51,8 @@ def getCSV(id):
         return {'message':'task not ready'},405
     
 
+
+    
 @app.get("/")
 def home():
     return render_template("index.html")
@@ -88,6 +91,48 @@ def user_login():
         "full_name": user.email.split('@')[0],
         "role": "admin" }), 200
 
+@app.route("/api/customers", methods=["GET"])
+@auth_required("token")
+def customer_info():
+    customers = Party.query.all()
+    if not customers:
+        return jsonify({"message": "No customer found"}), 404
+    
+    return jsonify([
+            {"id": customer.id, "phone": customer.phone, "name": customer.name}
+            for customer in customers
+        ])
+
+
+@app.route("/api/update/customer/<int:id>", methods=["GET","POST"])
+@auth_required("token")
+@roles_required("admin")
+def update_customer(id):
+    customer = Party.query.get_or_404(id)
+
+    if request.method == "GET":
+        return jsonify({
+            "id": customer.id,
+            "name": customer.name,
+            "phone ": customer.phone,
+        })
+
+    elif request.method == "POST":
+        data = request.json
+        customer.phone = data["phone"]
+        customer.name = data["name"]
+        db.session.commit()
+        return jsonify({"message": "customer info updated successfully"})
+
+
+@app.route("/delete/customer/<int:id>", methods=["DELETE"])
+@auth_required("token")
+@roles_required("admin")
+def delete_customer(id):
+    customer = Party.query.get_or_404(id)
+    db.session.delete(customer)
+    db.session.commit()
+    return jsonify({"message": "customer deleted successfully"})
 
 
 @app.route("/api/products", methods=["GET", "POST"])
@@ -97,7 +142,7 @@ def manage_products():
     if request.method == "GET":
         products = Product.query.all()
         return jsonify([
-            {"id": s.id, "make": s.make, "type": s.type, "color": s.color, "rate": s.rate}
+            {"id": s.id, "make": s.make, "type": s.type, "color": s.color, "rate": s.rate, "coil_id": s.coil_id }
             for s in products
         ])
 
@@ -111,7 +156,8 @@ def manage_products():
             make=data["make"],
             type=data["type"],
             color=data["color"],
-            rate=data["rate"]
+            rate=data["rate"],
+            coil_id=data["coil_id"] if "coil_id" in data else None
         )
         db.session.add(new_product)
         db.session.commit()
@@ -229,3 +275,188 @@ def delete_coil(id):
     db.session.delete(coil)
     db.session.commit()
     return jsonify({"message": "product deleted successfully"})
+
+
+@app.route("/api/parties", methods=["GET", "POST"])
+@auth_required("token")
+def manage_parties():
+    if request.method == "GET":
+        parties = Party.query.all()
+        return jsonify([
+            {"id": s.id, "name": s.name, "phone": s.phone}
+            for s in parties
+        ])
+
+    elif request.method == "POST":
+        data = request.json
+        if not data.get("name"):
+            return jsonify({"message": "name is necessary"}), 400
+        
+        new_party = Party(
+            name=data.get("name"),
+            phone=data.get("phone")
+        )
+        db.session.add(new_party)
+        db.session.commit()
+        return jsonify({
+                "id": new_party.id,
+                "name": new_party.name,
+                "phone_number": new_party.phone_number
+            })
+    
+    
+@app.route("/api/sales", methods=["GET", "POST"])
+@auth_required("token")
+def manage_sales():
+    if request.method == "GET":
+        sales = Sale.query.all()
+        return jsonify([
+            {
+                "id": sale.id,
+                "date": sale.date.strftime("%Y-%m-%d %H:%M:%S"),
+                "party_id": sale.party_id,
+                "total_amount": sale.total_amount,
+                "items": [
+                    {
+                        "id": item.id,
+                        "product_id": item.product_id,
+                        "length": item.length,
+                        "quantity": item.quantity,
+                        "rate": item.rate,
+                        "amount": item.amount,
+                        "is_custom": item.is_custom
+                    } for item in sale.items
+                ],
+                "coils": [
+                    {
+                        "id": coil.id,
+                        "coil_id": coil.coil_id,
+                        #"weight": coil.weight
+                    } for coil in sale.coils
+                ]
+            } for sale in sales
+        ])
+
+    elif request.method == "POST":
+        # DEBUG — print exactly what Flask sees
+        print("Raw data received:", request.data)
+        print("Content-Type header:", request.headers.get("Content-Type"))
+            
+        data = request.get_json()
+
+    party_name = data.get("party_name")
+    if not party_name:
+        return jsonify({"error": "Party name is required"}), 400
+
+    # Find or create party
+    party = Party.query.filter_by(name=party_name).first()
+    if not party:
+        party = Party(name=party_name)
+        db.session.add(party)
+        db.session.flush()  # Now we have party.id
+
+    # Create Sale
+    sale = Sale(
+        party_id=party.id,
+        total_amount=data.get("total_amount", 0)
+    )
+    db.session.add(sale)
+    db.session.flush()
+
+    # Add coils & items
+    for coil_group in data.get("coils", []):
+        coil_id = coil_group.get("coil_id")
+        product_id = coil_group.get("product_id")
+
+        # Skip coil if missing IDs
+        if not coil_id or not product_id:
+            continue
+
+        sale_coil = SaleCoil(
+            sale_id=sale.id,
+            coil_id=coil_id,
+        )
+        db.session.add(sale_coil)
+        db.session.flush()
+
+        for item in coil_group.get("items", []):
+            # Skip invalid items
+            if not product_id or not item.get("length") or not item.get("quantity"):
+                continue
+
+            sale_item = SaleItem(
+                sale_coil_id=sale_coil.id,
+                product_id=product_id,
+                length=item.get("length"),
+                quantity=item.get("quantity"),
+                rate=item.get("rate", 0),
+                amount=item.get("amount", 0),
+                is_custom=item.get("is_custom", False)
+            )
+            db.session.add(sale_item)
+
+    db.session.commit()
+
+    return jsonify({"message": "Sale created successfully", "sale_id": sale.id}), 201
+
+from sqlalchemy.orm import joinedload
+
+@app.route("/api/all_orders", methods=["GET"])
+def all_orders():
+    sales = (
+        Sale.query
+        .options(
+            joinedload(Sale.party),  # Party info
+            joinedload(Sale.used_coils)
+                .joinedload(SaleCoil.coil),  # Coil info
+            joinedload(Sale.used_coils)
+                .joinedload(SaleCoil.items)
+                .joinedload(SaleItem.product)  # Product info
+        )
+        .all()
+    )
+
+    results = []
+    for sale in sales:
+        sale_data = {
+            "sale_id": sale.id,
+            "date": sale.date.strftime("%Y-%m-%d"),
+            "party": {
+                "id": sale.party.id,
+                "name": sale.party.name,
+                "phone": sale.party.phone
+            },
+            "total_amount": sale.total_amount,
+            "used_coils": []
+        }
+
+        for sc in sale.used_coils:
+            coil_data = {
+                "coil_id": sc.coil.id,
+                "coil_number": sc.coil.coil_number,
+                "make": sc.coil.make,
+                "type": sc.coil.type,
+                "color": sc.coil.color,
+                "items": []
+            }
+            for item in sc.items:
+                coil_data["items"].append({
+                    "item_id": item.id,
+                    "product": {
+                        "id": item.product.id,
+                        "make": item.product.make,
+                        "type": item.product.type,
+                        "color": item.product.color,
+                        "rate": item.product.rate
+                    },
+                    "length": item.length,
+                    "quantity": item.quantity,
+                    "rate": item.rate,
+                    "amount": item.amount,
+                    "is_custom": item.is_custom
+                })
+            sale_data["used_coils"].append(coil_data)
+
+        results.append(sale_data)
+
+    return jsonify(results)

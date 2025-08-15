@@ -62,7 +62,7 @@ export default {
             try {
                 const res = await fetch("/api/products", {
                     headers: { "Authentication-Token": this.token }
-                });
+                });console.log("auth token", this.token);
                 if (res.ok) {
                     this.products = await res.json();
                 } else {
@@ -81,7 +81,7 @@ export default {
             this.$router.push("/create-coil");
         },
         goToCreatesaleorder() {
-            this.$router.push("/create-sale-order");
+            this.$router.push("/create_sale_order");
         },
 
 
@@ -100,7 +100,7 @@ export default {
                     method: "DELETE",
                     headers: { "Authentication-Token": this.token }
                 });
-
+                
                 if (res.ok) {
                     alert("product deleted successfully!");
                     this.fetchproducts(); // Refresh list

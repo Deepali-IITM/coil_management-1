@@ -93,7 +93,7 @@ export default {
 
                 if (res.ok) {
                     alert("Coil added successfully!");
-                    this.$router.push("/coils");
+                    this.$router.push("/");
                 } else {
                     const errorText = await res.text();
                     alert("Failed to add coil: " + errorText);

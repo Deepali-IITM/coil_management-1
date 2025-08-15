@@ -5,12 +5,13 @@ import Purchase from "./components/purchase.js";
 import Customers from "./components/customer.js"
 import Coils from "./components/coil_info.js"
 import Products from "./components/product_info.js";
-import Sales from "./components/sale.js";
+import Sales from "./components/create_sale.js";
 import ProductForm from "./components/productform.js";
 import UpdateProductForm from "./components/updateproductform.js";
 import CoilForm from "./components/coilform.js";
-import SaleOrder from "./components/saleorder.js";
+import SaleOrder from "./components/view_sale_order.js";
 import UpdateCoilForm from "./components/updatecoilform.js";
+import Summary from "./components/summary.js";
 
 
 const routes = [
@@ -21,12 +22,13 @@ const routes = [
     { path: '/customer_info', component: Customers},
     { path: '/coil_info', component: Coils},
     { path: '/product_info', component: Products},
-    { path: '/sales', component: Sales},
+    { path: '/create_sale_order', component: Sales},
     { path: "/create-product", component:ProductForm},
     { path:"/update-product", component:UpdateProductForm},
     { path:"/create-coil", component:CoilForm},
     { path:"/update-coil", component:UpdateCoilForm},
-    { path:"/create-sale-order", component:SaleOrder},
+    { path:"/view_all_orders", component:SaleOrder},
+    { path:"/product-summary", component:Summary}
 
 ];
 

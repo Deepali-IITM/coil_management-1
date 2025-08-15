@@ -10,15 +10,18 @@ export default {
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                     <!-- Admin Navigation -->
                     <li class="nav-item" v-if="role === 'admin'">
-                        <router-link class="nav-link" to="/users">view customers</router-link>
+                        <router-link class="nav-link" to="/customer_info">view customers</router-link>
                     </li>
                     
                     <li class="nav-item" v-if="role === 'admin'">
-                        <router-link class="nav-link" to="/manage-products">purchase orders</router-link>
+                        <router-link class="nav-link" to="/create_sale_order">sale orders</router-link>
                     </li>
 
                     <li class="nav-item" v-if="role === 'admin'">
                         <router-link class="nav-link" to="/coil_info">coil info</router-link>
+                    </li>
+                    <li class="nav-item" v-if="role === 'admin'">
+                        <router-link class="nav-link" to="/view_all_orders">all orders</router-link>
                     </li>
 
                     <!-- New product Summary Link -->

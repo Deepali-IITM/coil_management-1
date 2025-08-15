@@ -4,37 +4,33 @@ export default {
         <h2 class="text-center text-primary">Add a New Product</h2>
         <form @submit.prevent="createProduct">
             
-            <!-- ProductMAKE Name -->
+            <!-- Select Coil -->
             <div class="mb-3">
-                <label for="product-make" class="form-label">Product make:</label>
-                <select class="form-control" id="product-make" v-model="product.make">
-                    <option v-for="make in makeOptions" :key="make">{{ make }}</option>
-                    <option value="Other">Other</option>
+                <label for="coil" class="form-label">Select Coil Number:</label>
+                <select class="form-control" id="coil" v-model.number="selectedCoilId" @change="setCoilDetails">
+                    <option disabled value="">-- Select a Coil --</option>
+                    <option v-for="coil in coils" :key="coil.id" :value="coil.id">
+                        {{ coil.coil_number }} ({{ coil.make }} - {{ coil.type }} - {{ coil.color }})
+                    </option>
                 </select>
-                <input v-if="product.make === 'Other'" type="text" class="form-control mt-2"
-                       placeholder="Enter product name" v-model="customProductName">
             </div>
 
-            <!-- TYPE -->
+            <!-- Make -->
+            <div class="mb-3">
+                <label for="product-make" class="form-label">Make:</label>
+                <input type="text" class="form-control" id="product-make" v-model="product.make" readonly>
+            </div>
+
+            <!-- Type -->
             <div class="mb-3">
                 <label for="product-type" class="form-label">Type:</label>
-                <select class="form-control" id="product-type" v-model="product.type">
-                    <option v-for="type in typeOptions" :key="type">{{ type }}</option>
-                    <option value="Other">Other</option>
-                </select>
-                <input v-if="product.type === 'Other'" type="text" class="form-control mt-2"
-                       placeholder="Enter type" v-model="customMake">
+                <input type="text" class="form-control" id="product-type" v-model="product.type" readonly>
             </div>
 
             <!-- Color -->
             <div class="mb-3">
                 <label for="product-color" class="form-label">Color:</label>
-                <select class="form-control" id="product-color" v-model="product.color">
-                    <option v-for="color in colorOptions" :key="color">{{ color }}</option>
-                    <option value="Other">Other</option>
-                </select>
-                <input v-if="product.color === 'Other'" type="text" class="form-control mt-2"
-                       placeholder="Enter color" v-model="customColor">
+                <input type="text" class="form-control" id="product-color" v-model="product.color" readonly>
             </div>
 
             <!-- Rate -->
@@ -49,29 +45,47 @@ export default {
     `,
     data() {
         return {
-            makeOptions: ["JSW", "Jindal", "TATA"],  // Existing products
-            typeOptions: ["COLORON", "PRAGATI"],       // Existing makes
-            colorOptions: ["Red", "silver"],      // Existing colors
-            product: {make: "", type: "", color: "", rate: "" },
-            customMake: "",
-            customType: "",
-            customColor: "",
+            coils: [],
+            selectedCoilId: "",
+            product: { make: "", type: "", color: "", rate: "", coil_id: "" },
             token: localStorage.getItem("auth-token")
         };
     },
+    async mounted() {
+        await this.fetchCoils();
+    },
     methods: {
+        async fetchCoils() {
+            try {
+                const res = await fetch("/api/coils", {
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authentication-Token": this.token
+                    }
+                });
+                if (res.ok) {
+                    this.coils = await res.json();
+                } else {
+                    alert("Error fetching coils!");
+                }
+            } catch (error) {
+                console.error("Error fetching coils:", error);
+            }
+        },
+        setCoilDetails() {
+            const selectedCoil = this.coils.find(c => c.id === this.selectedCoilId);
+            if (selectedCoil) {
+                this.product.make = selectedCoil.make;
+                this.product.type = selectedCoil.type;
+                this.product.color = selectedCoil.color;
+                this.product.coil_id = selectedCoil.id; // ✅ Always set coil_id
+            }
+        },
         async createProduct() {
-            // Replace dropdown 'Other' with custom input values
-            if (this.product.make === "Other") {
-                this.product.make = this.customProductName;
+            if (!this.product.coil_id) {
+                alert("Please select a coil before creating the product.");
+                return;
             }
-            if (this.product.type === "Other") {
-                this.product.type = this.customMake;
-            }
-            if (this.product.color === "Other") {
-                this.product.color = this.customColor;
-            }
-
             try {
                 const res = await fetch("/api/products", {
                     method: "POST",
@@ -83,9 +97,10 @@ export default {
                 });
                 if (res.ok) {
                     alert("Product created successfully!");
-                    this.$router.push("/"); // Redirect to Admin Dashboard
+                    this.$router.push("/");
                 } else {
-                    alert("This product already exists or an error occurred!");
+                    const err = await res.json();
+                    alert(err.message || "This product already exists or an error occurred!");
                 }
             } catch (error) {
                 console.error("Error creating product:", error);
