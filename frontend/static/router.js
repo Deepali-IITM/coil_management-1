@@ -13,7 +13,7 @@ import SaleOrder from "./components/view_sale_order.js";
 import UpdateCoilForm from "./components/updatecoilform.js";
 import SearchResults from "./components/searchresults.js";
 import Dashboard from "./components/dashboard.js";
-
+import Productions from "./components/productions.js"
 
 const routes = [
     { path: "/", component: AdminHome, meta: { requiresAuth: true } },
@@ -30,7 +30,8 @@ const routes = [
     { path:"/update-coil", component:UpdateCoilForm},
     { path:"/view_all_orders", component:SaleOrder},
     { path:"/search", component: SearchResults},
-    { path:"/dashboard", componenet: Dashboard}
+    { path:"/dashboard", component: Dashboard},
+    { path:"/productions", component:Productions}
     
 
 ];

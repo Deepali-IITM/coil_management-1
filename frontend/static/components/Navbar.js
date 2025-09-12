@@ -2,7 +2,13 @@ export default {
   template: `
   <nav class="navbar navbar-expand-lg navbar-light bg-light">
     <div class="container-fluid">
-      <a class="navbar-brand text-primary" href="/">Coil and Sheet Management</a>
+      <!-- Brand link changes based on authentication -->
+      <router-link 
+        class="navbar-brand text-primary" 
+        :to="isAuthenticated ? '/dashboard' : '/'">
+        Coil and Sheet Management
+      </router-link>
+
       <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
       </button>
@@ -14,16 +20,13 @@ export default {
             <router-link class="nav-link" to="/customer_info">View Customers</router-link>
           </li>
           <li class="nav-item" v-if="role === 'admin'">
-            <router-link class="nav-link" to="/dashboard">Dashboard</router-link>
-          </li>
-          <li class="nav-item" v-if="role === 'admin'">
             <router-link class="nav-link" to="/coil_info">Coils</router-link>
           </li>
           <li class="nav-item" v-if="role === 'admin'">
             <router-link class="nav-link" to="/create_sale_order">Sales Orders</router-link>
           </li>
           <li class="nav-item" v-if="role === 'admin'">
-            <router-link class="nav-link" to="/">Productions</router-link>
+            <router-link class="nav-link" to="/productions">Productions</router-link>
           </li>
           <li class="nav-item" v-if="role === 'admin'">
             <router-link class="nav-link" to="/view_all_orders">All Orders</router-link>
@@ -66,7 +69,6 @@ export default {
         return;
       }
 
-      // Redirect to a dedicated search results page with query params
       this.$router.push({
         path: "/search",
         query: {

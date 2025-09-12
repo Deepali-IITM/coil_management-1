@@ -47,6 +47,12 @@ export default {
                 <input v-model="coil.color" type="text" class="form-control" placeholder="Enter color">
             </div>
 
+            <!-- length-->
+            <div class="mb-3">
+                <label class="form-label">length</label>
+                <input v-model="coil.length" type="number" class="form-control" placeholder="Enter length of the coil (theoretical)">
+            </div>     
+
             <!-- Purchase Date -->
             <div class="mb-3">
                 <label class="form-label">Purchase Date</label>
@@ -68,6 +74,7 @@ export default {
                 make: "",
                 type: "",
                 color: "",
+                length: "",
                 purchase_date: ""
             },
             token: localStorage.getItem("auth-token")

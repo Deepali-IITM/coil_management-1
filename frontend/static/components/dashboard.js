@@ -1,6 +1,4 @@
-
 export default {
-  
   template: `
     <div class="container my-4">
       <h2 class="text-center">📊 Dashboard</h2>
@@ -28,18 +26,6 @@ export default {
           </div>
         </div>
       </div>
-
-      <!-- Sales Trend Chart -->
-      <div class="row mt-5">
-        <div class="col-md-12">
-          <div class="card shadow-sm">
-            <div class="card-body">
-              <h5 class="text-center">📈 Sales Trend (Last 6 Months)</h5>
-              <canvas id="salesChart"></canvas>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   `,
   data() {
@@ -49,11 +35,9 @@ export default {
         total_products: 0,
         active_orders: 0,
         finished_coils: 0,
-        remaining_material: 0,
-        sales_trend: []
+        remaining_material: 0
       },
-      token: localStorage.getItem("auth-token") || "",
-      chart: null
+      token: localStorage.getItem("auth-token") || ""
     };
   },
   computed: {
@@ -73,39 +57,8 @@ export default {
       });
       if (!res.ok) throw new Error("Failed to fetch dashboard data");
       this.stats = await res.json();
-      this.renderChart();
     } catch (err) {
       console.error(err.message);
-    }
-  },
-  methods: {
-    renderChart() {
-      if (this.chart) this.chart.destroy();
-      const ctx = document.getElementById("salesChart").getContext("2d");
-      const labels = this.stats.sales_trend.map(s => `Month ${s.month}`);
-      const data = this.stats.sales_trend.map(s => s.total);
-
-      this.chart = new Chart(ctx, {
-        type: "line",
-        data: {
-          labels,
-          datasets: [{
-            label: "Total Sales",
-            data,
-            borderColor: "rgba(54, 162, 235, 1)",
-            backgroundColor: "rgba(54, 162, 235, 0.2)",
-            fill: true,
-            tension: 0.3,
-            pointBackgroundColor: "blue"
-          }]
-        },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: { display: true, position: "top" }
-          }
-        }
-      });
     }
   }
 };
