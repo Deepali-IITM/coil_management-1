@@ -72,6 +72,8 @@ class Coil(db.Model):
     type = db.Column(db.String, nullable=False)
     color = db.Column(db.String, nullable=False)
     purchase_date = db.Column(db.String, default=datetime.now)
+    length=db.Column(db.Float)
+
 
     # Relationship to products
     products = db.relationship('Product', backref='coil', lazy=True)
@@ -83,6 +85,7 @@ class Product(db.Model):
     type = db.Column(db.String, nullable=False)
     color = db.Column(db.String, nullable=False)
     rate = db.Column(db.Float, nullable=False)
+    date= db.Column(db.String, default=datetime.now)
 
     # Foreign key to Coil
     coil_id = db.Column(db.Integer, db.ForeignKey('coil.id'), nullable=False)
@@ -126,6 +129,7 @@ class SaleItem(db.Model):
     quantity = db.Column(db.Integer, nullable=False)
     rate = db.Column(db.Float)  # Rate per foot
     amount = db.Column(db.Float)  # Computed: quantity * length * rate
+    excess_material=db.Column(db.Float)
     is_custom = db.Column(db.Boolean, default=False)
 
     product = db.relationship('Product', backref=db.backref('sale_items', lazy='dynamic'))

@@ -1,4 +1,5 @@
 import csv
+from operator import add
 from urllib import response
 from flask import current_app as app, jsonify, request, render_template, send_file
 from flask_security import auth_required, roles_required, verify_password, current_user
@@ -189,7 +190,7 @@ def manage_coils():
         coils = Coil.query.all()
         return jsonify([
             {"id": s.id, "coil_number":s.coil_number, "supplier_name":s.supplier_name,
-             "total_weight":s.total_weight,"purchase_price":s.purchase_price,
+             "total_weight":s.total_weight,"purchase_price":s.purchase_price,"length":s.length,
              "make": s.make, "type": s.type, "color": s.color, "purchase_date": s.purchase_date}
             for s in coils
         ])
@@ -208,7 +209,8 @@ def manage_coils():
                 make=data["make"],
                 type=data["type"],
                 color=data["color"],
-                purchase_date=data["purchase_date"]    
+                purchase_date=data["purchase_date"],
+                length=data["length"],
         )
         db.session.add(new_coil)
         db.session.commit()
@@ -232,6 +234,7 @@ def update_coil(id):
             "supplier_name":coil.supplier_name,
             "total_weight":coil.total_weight,
             "purchase_price":coil.purchase_price,
+            "length":coil.length,
 
         })
 
@@ -245,6 +248,7 @@ def update_coil(id):
         coil.supplier_name=data["supplier_name"]
         coil.total_weight=data["total_weight"]
         coil.purchase_date=data["purchase_date"]
+        coil.lenght=data["length"]
         db.session.commit()
         return jsonify({"message": "product updated successfully"})
 
@@ -313,6 +317,7 @@ def manage_sales():
                     {
                         "id": coil.id,
                         "coil_id": coil.coil_id,
+                        "length":coil.length,
                         #"weight": coil.weight
                     } for coil in sale.coils
                 ]
@@ -419,6 +424,7 @@ def all_orders():
                 "make": sc.coil.make,
                 "type": sc.coil.type,
                 "color": sc.coil.color,
+                "length":sc.coil.length,
                 "items": []
             }
             for item in sc.items:
@@ -722,3 +728,49 @@ def add_orders():
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 400
+
+
+from sqlalchemy import func, extract
+from datetime import datetime, timedelta
+
+@app.route("/api/dashboard", methods=["GET"])
+@auth_required("token")
+@roles_required("admin")
+def dashboard():
+    # Collect stats
+    total_coils = Coil.query.count()
+    total_products = Product.query.count()
+    active_orders = Sale.query.filter(Sale.total_amount > 0).count()
+    finished_coils = Coil.query.filter(Coil.length <= 0).count()
+
+    # Remaining material in active coils (sum of lengths > 0)
+    remaining_material = (
+        db.session.query(func.sum(Coil.length))
+        .filter(Coil.length > 0)
+        .scalar()
+        or 0
+    )
+
+    # Sales trend for the last 6 months
+    six_months_ago = datetime.now() - timedelta(days=180)
+    sales_trend = (
+        db.session.query(
+            extract("month", Sale.date).label("month"),
+            func.sum(Sale.total_amount).label("total")
+        )
+        .filter(Sale.date >= six_months_ago)
+        .group_by(extract("month", Sale.date))
+        .order_by(extract("month", Sale.date))
+        .all()
+    )
+
+    trend = [{"month": int(m), "total": float(t or 0)} for m, t in sales_trend]
+
+    return jsonify({
+        "total_coils": total_coils,
+        "total_products": total_products,
+        "active_orders": active_orders,
+        "finished_coils": finished_coils,
+        "remaining_material": float(remaining_material),
+        "sales_trend": trend
+    })

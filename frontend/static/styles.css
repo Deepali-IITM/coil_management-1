@@ -189,3 +189,9 @@ th, td {
   margin-bottom: 15px;
   color: #1e3a8a; /* dark blue */
 }
+
+.icon-btn {
+  width: 20px;   /* adjust size here */
+  height: 20px;
+  object-fit: contain;  /* keeps aspect ratio */
+}

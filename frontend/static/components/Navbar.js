@@ -14,10 +14,16 @@ export default {
             <router-link class="nav-link" to="/customer_info">View Customers</router-link>
           </li>
           <li class="nav-item" v-if="role === 'admin'">
-            <router-link class="nav-link" to="/create_sale_order">Sale Orders</router-link>
+            <router-link class="nav-link" to="/dashboard">Dashboard</router-link>
           </li>
           <li class="nav-item" v-if="role === 'admin'">
-            <router-link class="nav-link" to="/coil_info">Coil Info</router-link>
+            <router-link class="nav-link" to="/coil_info">Coils</router-link>
+          </li>
+          <li class="nav-item" v-if="role === 'admin'">
+            <router-link class="nav-link" to="/create_sale_order">Sales Orders</router-link>
+          </li>
+          <li class="nav-item" v-if="role === 'admin'">
+            <router-link class="nav-link" to="/">Productions</router-link>
           </li>
           <li class="nav-item" v-if="role === 'admin'">
             <router-link class="nav-link" to="/view_all_orders">All Orders</router-link>

@@ -109,6 +109,7 @@ coil_fields = {
     "total_weight":fields.Float,
     "supplier_name":fields.String,
     "purchase_date":fields.DateTime,
+    "length":fields.Float,
 }
 
 
@@ -127,6 +128,7 @@ class CoilAPI(Resource):
             "type": coil.type,
             "color": coil.color,
             "purchase_date": coil.purchase_date.strftime("%Y-%m-%d %H:%M:%S"),
+            "length":coil.length,
         } for coil in coils])
 
 class UpdateCoil(Resource):
@@ -144,6 +146,7 @@ class UpdateCoil(Resource):
             "type": fields.String,
             "color": fields.String,
             "purchase_date": fields.String,
+            "length":fields.Float,
         })
 
     def post(self, id):
@@ -214,6 +217,7 @@ class SaleAPI(Resource):
                     {
                         "id": coil_link.id,
                         "coil_id": coil_link.coil_id,
+                        "length":coil_link.length,
                         "coil_details": {
                             "make": coil_link.coil.make if coil_link.coil else None,
                             "type": coil_link.coil.type if coil_link.coil else None,
@@ -262,6 +266,7 @@ class SaleAPI(Resource):
                     coil_link = SaleCoil(
                         sale_id=sale.id,
                         coil_id=coil.get("coil_id"),
+                        length=coil.get("length"),
                         weight=coil.get("weight") if "weight" in coil else None
                     )
                     db.session.add(coil_link)
@@ -439,6 +444,60 @@ class ImportOrdersAPI(Resource):
             db.session.rollback()
             return {"error": str(e)}, 400
 
+from sqlalchemy import func
+from flask_restful import Resource
+from flask_security import auth_required, roles_required
+from sqlalchemy import func, extract
+from datetime import datetime, timedelta
+from models import db, Party, Coil, Product, Sale, SaleItem, SaleCoil
+
+class DashboardAPI(Resource):
+    @auth_required("token")
+    @roles_required("admin")
+    def get(self):
+        # Total counts
+        total_coils = Coil.query.count()
+        total_products = Product.query.count()
+        active_orders = Sale.query.filter(Sale.total_amount == None).count()  # Or define active logic better
+        finished_coils = Coil.query.filter(
+            ~Coil.sales_used_in.any()
+        ).count()  # coils not linked to any sales
+
+        # Remaining material (sum of coil.total_weight minus used material)
+        remaining_material = 0
+        for coil in Coil.query.all():
+            total_used = 0
+            for sale_coil in coil.sales_used_in:
+                for item in sale_coil.items:
+                    total_used += (item.length * item.quantity)
+            if coil.total_weight:
+                remaining_material += max(coil.total_weight - total_used, 0)
+
+        # Sales Trend (last 6 months)
+        six_months_ago = datetime.now() - timedelta(days=180)
+        sales_trend = (
+            db.session.query(
+                extract("month", Sale.date).label("month"),
+                func.sum(Sale.total_amount).label("total"),
+            )
+            .filter(Sale.date >= six_months_ago)
+            .group_by(extract("month", Sale.date))
+            .order_by(extract("month", Sale.date))
+            .all()
+        )
+        sales_trend_data = [
+            {"month": int(month), "total": float(total or 0)} for month, total in sales_trend
+        ]
+
+        return {
+            "total_coils": total_coils,
+            "total_products": total_products,
+            "active_orders": active_orders,
+            "finished_coils": finished_coils,
+            "remaining_material": remaining_material,
+            "sales_trend": sales_trend_data,
+        }
+
 
 api.add_resource(ProductsAPI, "/products")
 api.add_resource(UpdateProuct, "/update/product/<int:id>")
@@ -449,3 +508,4 @@ api.add_resource(CustomerAPI, "/customers")
 api.add_resource(UpdateCustomer,"/update/customer/<int:id>")
 api.add_resource(AddOrdersAPI, "/add_orders")
 api.add_resource(ImportOrdersAPI, "/import_orders")
+api.add_resource(DashboardAPI,"/dashboard")

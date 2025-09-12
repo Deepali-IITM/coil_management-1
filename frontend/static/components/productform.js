@@ -1,7 +1,7 @@
 export default {
     template: `
     <div class="container">
-        <h2 class="text-center text-primary">Add a New Product</h2>
+        <h2 class="text-center text-primary">add new production</h2>
         <form @submit.prevent="createProduct">
             
             <!-- Select Coil -->

@@ -28,7 +28,8 @@ with app.app_context():
             purchase_date=datetime.now(),
             supplier_name="Steel Traders",
             total_weight=5000,
-            purchase_price=250000
+            purchase_price=250000,
+            length=700,
         )
         db.session.add(coil1)
         db.session.commit()
@@ -37,6 +38,8 @@ with app.app_context():
     prod1 = Product.query.filter_by(make="JSW", type="Coloron", color="Silver").first()
     if not prod1:
         prod1 = Product(
+            
+            date=datetime.now(),
             make=coil1.make,
             type=coil1.type,
             color=coil1.color,

@@ -16,11 +16,12 @@ export default {
                         <th>ID</th>
                         <th>Coil Number</th>
                         <th>Supplier Name</th>
-                        <th>Total Weight</th>
+                        <th>Total Weight (kg)</th>
                         <th>Purchase Price</th>
                         <th>Make</th>
                         <th>Type</th>
                         <th>Color</th>
+                        <th>length (meter)</th>
                         <th>Purchase Date</th>
                         <th>Actions</th>
                     </tr>
@@ -35,10 +36,18 @@ export default {
                         <td>{{ coil.make }}</td>
                         <td>{{ coil.type }}</td>
                         <td>{{ coil.color }}</td>
+                        <td> {{coil.length}}</td>
                         <td>{{ formatDate(coil.purchase_date) }}</td>
                         <td>
-                            <button class="btn btn-secondary btn-sm" @click="updateCoil(coil.id)">Edit</button>
-                            <button class="btn btn-danger btn-sm" @click="deleteCoil(coil.id)">Delete</button>
+                            <button @click="updateCoil(coil.id)">
+  <img src="/static/components/images/edit.png" alt="Edit" class="icon-btn" />
+</button>
+
+<button @click="deleteCoil(coil.id)">
+  <img src="/static/components/images/delete.png" alt="Delete" class="icon-btn" />
+</button>
+
+
                         </td>
                     </tr>
                 </tbody>
