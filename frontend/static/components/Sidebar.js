@@ -69,6 +69,11 @@ export default {
 
       <div class="sidebar-section-label mt-3">Insights</div>
       <nav class="sidebar-nav">
+        <router-link to="/analytics" class="sidebar-link" active-class="sidebar-link--active">
+          <i class="bi bi-graph-up-arrow"></i>
+          <span class="sidebar-link__label">Analytics</span>
+        </router-link>
+
         <router-link to="/reports" class="sidebar-link" active-class="sidebar-link--active">
           <i class="bi bi-bar-chart-line"></i>
           <span class="sidebar-link__label">Reports</span>

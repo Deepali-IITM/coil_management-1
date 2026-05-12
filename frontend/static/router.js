@@ -18,6 +18,7 @@ import Productions      from "./components/productions.js";
 import Settings         from "./components/Settings.js";
 import Reports          from "./components/Reports.js";
 import InvoicePrint     from "./components/InvoicePrint.js";
+import Analytics        from "./components/Analytics.js";
 
 const routes = [
     // Public
@@ -41,6 +42,7 @@ const routes = [
     { path: "/purchase_history",  component: Purchase,          meta: { requiresAuth: true, ownerOnly: true } },
     { path: "/settings",          component: Settings,          meta: { requiresAuth: true, ownerOnly: true } },
     { path: "/reports",           component: Reports,           meta: { requiresAuth: true, ownerOnly: true } },
+    { path: "/analytics",         component: Analytics,         meta: { requiresAuth: true, ownerOnly: true } },
     { path: "/invoice/:id",       component: InvoicePrint,      meta: { requiresAuth: true, ownerOnly: true } },
 
     // Accessible to both roles

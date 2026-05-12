@@ -1442,6 +1442,137 @@ body {
 
 .stat-card__value { font-size: 26px; font-weight: 800; line-height: 1; color: var(--text-primary); }
 .stat-card__label { font-size: 12px; color: var(--text-muted); margin-top: 4px; text-transform: uppercase; letter-spacing: .06em; }
+.stat--indigo .stat-card__value { color: var(--accent); }
+.stat--indigo .stat-card__icon  { background: var(--accent-light); color: var(--accent); }
+
+
+/* ── Analytics — vertical bar chart (monthly trend) ──────────────────────── */
+.analytics-trend-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 0 4px 4px;
+}
+
+.analytics-trend-bar-wrap {
+  flex: 1;
+  min-width: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.analytics-trend-bar-area {
+  flex: 0 0 160px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: 100%;
+}
+
+.analytics-trend-bar {
+  width: 68%;
+  max-width: 38px;
+  background: linear-gradient(to top, var(--accent-dark), var(--accent));
+  border-radius: 4px 4px 0 0;
+  position: relative;
+  transition: height .4s cubic-bezier(.4,0,.2,1);
+  min-height: 4px;
+}
+
+.analytics-trend-bar--current {
+  background: linear-gradient(to top, #0369a1, #38bdf8);
+}
+
+.analytics-trend-bar__val {
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  background: rgba(255,255,255,.9);
+  border: 1px solid var(--card-border);
+  padding: 1px 4px;
+  border-radius: 4px;
+}
+
+.analytics-trend-bar__label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-align: center;
+  margin-top: 6px;
+  line-height: 1.4;
+}
+
+.analytics-trend-bar__year {
+  font-size: 9px;
+  opacity: .7;
+}
+
+
+/* ── Analytics — horizontal bar chart (top customers / products) ─────────── */
+.analytics-hbar-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.analytics-hbar-rank {
+  flex: 0 0 18px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.analytics-hbar-name {
+  flex: 0 0 120px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.analytics-hbar {
+  flex: 1;
+  height: 10px;
+  background: #e8edf4;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.analytics-hbar__fill {
+  height: 100%;
+  background: linear-gradient(to right, var(--accent-dark), var(--accent));
+  border-radius: 5px;
+  transition: width .5s cubic-bezier(.4,0,.2,1);
+}
+
+.analytics-hbar--green .analytics-hbar__fill {
+  background: linear-gradient(to right, #166534, var(--success));
+}
+
+.analytics-hbar-val {
+  flex: 0 0 72px;
+  text-align: right;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+
+/* ── Spin animation (refresh button) ─────────────────────────────────────── */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { display: inline-block; animation: spin .7s linear infinite; }
 
 /* ── Create Sale — customer search ────────────────────────────────────────── */
 .customer-suggestions {
