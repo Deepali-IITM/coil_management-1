@@ -1,124 +1,114 @@
 export default {
-    template: `
-    <div>
-        <h2 class="text-center">see all available products</h2>
-
-        <!--Add product Button -->
-        <div class="text-center mb-3">
-            <button class="btn btn-outline-success" @click="goToCreateproduct">+ Add new product</button>
-            <button class="btn btn-outline-success" @click="goToCreatecoil">+ Add new coil</button>
-            <button class="btn btn-outline-success" @click="goToCreatesaleorder"> + new sale order</button>
-        </div>
-
-        <!--products List -->
-        <div class="table-responsive" v-if="products.length">
-            <table class="table table-striped table-hover text-center">
-                <thead class="table-dark">
-                    <tr>
-                        <th>ID</th>
-                        <th>Make</th>
-                        <th>Type</th>
-                        <th>Colour</th>
-                        <th>Rate</th>
-                        <th>Any change?</th>
-                    
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="product in products" :key="product.id">
-                        <td>{{ product.id }}</td>
-                        <td>{{ product.make }}</td>
-                        <td>{{ product.type }}</td>
-                        <td>{{ product.color }}</td>
-                        <td>{{ product.rate }}</td>
-                        <td>
-                            <button class="btn btn-secondary btn-sm" @click="updateproduct(product.id)"> Edit</button>
-                            <button class="btn btn-danger btn-sm" @click="deleteproduct(product.id)"> Delete</button>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-
-        <div v-else class="text-center text-danger">
-            No products available.
-        </div>
-
-    
-
+  name: "Products",
+  template: `
+  <div class="page-wrapper">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Products</h1>
+        <p class="page-sub">{{ products.length }} product{{ products.length !== 1 ? 's' : '' }} defined</p>
+      </div>
+      <button class="btn btn-primary" @click="$router.push('/create-product')">
+        <i class="bi bi-plus-lg me-1"></i>Add Product
+      </button>
     </div>
-    `,
-    data() {
-        return {
-            products: [],
-            searchQuery: '',
-            searchType: 'professionals',
-            searchResults: [],
-            token: localStorage.getItem("auth-token")
-        };
+
+    <div v-if="loading" class="d-flex justify-content-center py-5">
+      <div class="spinner-border text-primary"></div>
+    </div>
+
+    <div v-else class="card">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead class="table-head-accent">
+            <tr>
+              <th>Make</th>
+              <th>Type</th>
+              <th>Color</th>
+              <th class="text-end">Rate (₹/ft)</th>
+              <th class="text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-if="!products.length">
+              <td colspan="5" class="text-center text-muted py-5">
+                <i class="bi bi-box-seam display-4 d-block mb-2"></i>
+                No products yet. Add your first product to get started.
+              </td>
+            </tr>
+            <tr v-for="p in products" :key="p.id">
+              <td class="fw-semibold">{{ p.make }}</td>
+              <td>{{ p.type }}</td>
+              <td>{{ p.color }}</td>
+              <td class="text-end fw-semibold text-success">₹ {{ p.rate }}</td>
+              <td class="text-center">
+                <div class="d-flex gap-1 justify-content-center">
+                  <button class="btn btn-sm btn-outline-secondary" @click="editProduct(p.id)" title="Edit">
+                    <i class="bi bi-pencil"></i>
+                  </button>
+                  <button class="btn btn-sm btn-outline-danger" @click="deleteProduct(p.id)" title="Delete">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  `,
+
+  data() {
+    return {
+      products: [],
+      loading: true,
+    };
+  },
+
+  methods: {
+    token() { return localStorage.getItem("auth-token"); },
+
+    async fetchProducts() {
+      this.loading = true;
+      try {
+        const res = await fetch("/api/products", {
+          headers: { "Authentication-Token": this.token() },
+        });
+        if (res.ok) {
+          this.products = await res.json();
+        } else {
+          this.$toast.error("Failed to load products.");
+        }
+      } catch {
+        this.$toast.error("Network error loading products.");
+      } finally {
+        this.loading = false;
+      }
     },
-    methods: {
-        async fetchproducts() {
-            try {
-                const res = await fetch("/api/products", {
-                    headers: { "Authentication-Token": this.token }
-                });console.log("auth token", this.token);
-                if (res.ok) {
-                    this.products = await res.json();
-                } else {
-                    console.error("Failed to fetch products");
-                }
-            } catch (error) {
-                console.error("Error fetching products:", error);
-            }
-        },
 
-        // ✅ Navigate to the "Create product" Page
-        goToCreateproduct() {
-            this.$router.push("/create-product");
-        },
-        goToCreatecoil() {
-            this.$router.push("/create-coil");
-        },
-        goToCreatesaleorder() {
-            this.$router.push("/create_sale_order");
-        },
-
-
-        // ✅ Navigate to the "Update product" Page
-        updateproduct(productId) {
-            localStorage.setItem("update_product_id", productId);
-            this.$router.push("/update-product");
-        },
-
-        // ✅ Delete a product
-        async deleteproduct(productId) {
-            if (!confirm("Are you sure you want to delete this product?")) return;
-
-            try {
-                const res = await fetch(`/delete/product/${productId}`, {
-                    method: "DELETE",
-                    headers: { "Authentication-Token": this.token }
-                });
-                
-                if (res.ok) {
-                    alert("product deleted successfully!");
-                    this.fetchproducts(); // Refresh list
-                } else {
-                    console.error("product Request exists! Failed to delete product");
-                    alert("Sorry! this product is requested by customer");
-                }
-            } catch (error) {
-                console.error("Error deleting product:", error);
-            }
-        },
-
-        
-        
-
-       
+    editProduct(productId) {
+      localStorage.setItem("update_product_id", productId);
+      this.$router.push("/update-product");
     },
-    async mounted() {
-        this.fetchproducts();
-    }
+
+    async deleteProduct(productId) {
+      if (!confirm("Delete this product? This cannot be undone.")) return;
+      try {
+        const res = await fetch(`/delete/product/${productId}`, {
+          method: "DELETE",
+          headers: { "Authentication-Token": this.token() },
+        });
+        if (res.ok) {
+          await this.fetchProducts();
+          this.$toast.success("Product deleted.");
+        } else {
+          this.$toast.error("Cannot delete — this product is linked to existing sale orders.");
+        }
+      } catch {
+        this.$toast.error("Network error. Could not delete product.");
+      }
+    },
+  },
+
+  mounted() { this.fetchProducts(); },
 };

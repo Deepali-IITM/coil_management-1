@@ -1,115 +1,135 @@
 export default {
-    template: `
-    <div>
-        <h2 class="text-center">See All Available Coils</h2>
-
-        <!-- Add Coil Button -->
-        <div class="text-center mb-3">
-            <button class="btn btn-outline-success" @click="goToCreateCoil">+ Add New Coil</button>
-        </div>
-
-        <!-- Coil List -->
-        <div class="table-responsive" v-if="coils.length">
-            <table class="table table-striped table-hover text-center">
-                <thead class="table-dark">
-                    <tr>
-                        <th>ID</th>
-                        <th>Coil Number</th>
-                        <th>Supplier Name</th>
-                        <th>Total Weight (kg)</th>
-                        <th>Purchase Price</th>
-                        <th>Make</th>
-                        <th>Type</th>
-                        <th>Color</th>
-                        <th>length (meter)</th>
-                        <th>Purchase Date</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="coil in coils" :key="coil.id">
-                        <td>{{ coil.id }}</td>
-                        <td>{{ coil.coil_number }}</td>
-                        <td>{{ coil.supplier_name }}</td>
-                        <td>{{ coil.total_weight }}</td>
-                        <td>{{ coil.purchase_price }}</td>
-                        <td>{{ coil.make }}</td>
-                        <td>{{ coil.type }}</td>
-                        <td>{{ coil.color }}</td>
-                        <td> {{coil.length}}</td>
-                        <td>{{ formatDate(coil.purchase_date) }}</td>
-                        <td>
-                            <button @click="updateCoil(coil.id)">
-  <img src="/static/components/images/edit.png" alt="Edit" class="icon-btn" />
-</button>
-
-<button @click="deleteCoil(coil.id)">
-  <img src="/static/components/images/delete.png" alt="Delete" class="icon-btn" />
-</button>
-
-
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-
-        <div v-else class="text-center text-danger">
-            No coils available.
-        </div>
+  name: "CoilInventory",
+  template: `
+  <div class="page-wrapper">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Coil Inventory</h1>
+        <p class="page-sub">{{ coils.length }} coil{{ coils.length !== 1 ? 's' : '' }} in stock</p>
+      </div>
+      <button class="btn btn-primary" @click="$router.push('/create-coil')">
+        <i class="bi bi-plus-lg me-1"></i>Add New Coil
+      </button>
     </div>
-    `,
-    data() {
-        return {
-            coils: [],
-            token: localStorage.getItem("auth-token")
-        };
-    },
-    methods: {
-        async fetchCoils() {
-            try {
-                const res = await fetch("/api/coils", {
-                    headers: { "Authentication-Token": this.token }
-                });
-                if (res.ok) {
-                    this.coils = await res.json();
-                } else {
-                    console.error("Failed to fetch coils");
-                }
-            } catch (error) {
-                console.error("Error fetching coils:", error);
-            }
-        },
-        formatDate(dateStr) {
-            const date = new Date(dateStr);
-            return date.toLocaleDateString();
-        },
-        goToCreateCoil() {
-            this.$router.push("/create-coil");
-        },
-        updateCoil(coilId) {
-            localStorage.setItem("update_coil_id", coilId);
-            this.$router.push("/update-coil");
-        },
-        async deleteCoil(coilId) {
-            if (!confirm("Are you sure you want to delete this coil?")) return;
-            try {
-                const res = await fetch(`/delete/coil/${coilId}`, {
-                    method: "DELETE",
-                    headers: { "Authentication-Token": this.token }
-                });
-                if (res.ok) {
-                    alert("Coil deleted successfully!");
-                    this.fetchCoils();
-                } else {
-                    alert("Error: Could not delete coil.");
-                }
-            } catch (error) {
-                console.error("Error deleting coil:", error);
-            }
+
+    <div v-if="loading" class="d-flex justify-content-center py-5">
+      <div class="spinner-border text-primary"></div>
+    </div>
+    <div v-else-if="error" class="alert alert-danger">{{ error }}</div>
+
+    <div v-else class="card">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead class="table-head-accent">
+            <tr>
+              <th>Coil No.</th>
+              <th>Supplier</th>
+              <th>Make</th>
+              <th>Type</th>
+              <th>Color</th>
+              <th class="text-end">Weight (kg)</th>
+              <th class="text-end">Price (₹)</th>
+              <th class="text-end">Length (m)</th>
+              <th>Purchase Date</th>
+              <th class="text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-if="!coils.length">
+              <td colspan="10" class="text-center text-muted py-5">
+                <i class="bi bi-layers display-4 d-block mb-2"></i>
+                No coils found. Add your first coil to get started.
+              </td>
+            </tr>
+            <tr v-for="coil in coils" :key="coil.id">
+              <td class="fw-semibold">{{ coil.coil_number }}</td>
+              <td>{{ coil.supplier_name || '—' }}</td>
+              <td>{{ coil.make }}</td>
+              <td>{{ coil.type }}</td>
+              <td>{{ coil.color }}</td>
+              <td class="text-end">{{ coil.total_weight != null ? coil.total_weight : '—' }}</td>
+              <td class="text-end">{{ coil.purchase_price != null ? '₹' + coil.purchase_price : '—' }}</td>
+              <td class="text-end fw-semibold" :class="coil.length > 0 ? 'text-info' : 'text-muted'">
+                {{ coil.length != null ? coil.length : '—' }}
+              </td>
+              <td class="text-muted">{{ formatDate(coil.purchase_date) }}</td>
+              <td class="text-center">
+                <div class="d-flex gap-1 justify-content-center">
+                  <button class="btn btn-sm btn-outline-secondary" @click="editCoil(coil.id)" title="Edit">
+                    <i class="bi bi-pencil"></i>
+                  </button>
+                  <button class="btn btn-sm btn-outline-danger" @click="deleteCoil(coil.id)" title="Delete">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  `,
+
+  data() {
+    return {
+      coils: [],
+      loading: true,
+      error: null,
+    };
+  },
+
+  methods: {
+    token() { return localStorage.getItem("auth-token"); },
+
+    async fetchCoils() {
+      this.loading = true;
+      this.error = null;
+      try {
+        const res = await fetch("/api/coils", {
+          headers: { "Authentication-Token": this.token() },
+        });
+        if (res.ok) {
+          this.coils = await res.json();
+        } else {
+          this.error = "Failed to load coils.";
         }
+      } catch {
+        this.error = "Network error. Could not load coils.";
+      } finally {
+        this.loading = false;
+      }
     },
-    async mounted() {
-        this.fetchCoils();
-    }
+
+    formatDate(dateStr) {
+      if (!dateStr) return "—";
+      const d = new Date(dateStr);
+      return isNaN(d) ? String(dateStr).split("T")[0] : d.toLocaleDateString("en-IN");
+    },
+
+    editCoil(coilId) {
+      localStorage.setItem("update_coil_id", coilId);
+      this.$router.push("/update-coil");
+    },
+
+    async deleteCoil(coilId) {
+      if (!confirm("Delete this coil? This cannot be undone.")) return;
+      try {
+        const res = await fetch(`/delete/coil/${coilId}`, {
+          method: "DELETE",
+          headers: { "Authentication-Token": this.token() },
+        });
+        if (res.ok) {
+          await this.fetchCoils();
+          this.$toast.success("Coil deleted.");
+        } else {
+          this.$toast.error("Cannot delete — this coil is linked to existing sale orders.");
+        }
+      } catch {
+        this.$toast.error("Network error. Could not delete coil.");
+      }
+    },
+  },
+
+  mounted() { this.fetchCoils(); },
 };
