@@ -1680,3 +1680,288 @@ body {
 .stock-error   { color: var(--danger); font-size: 12px; font-weight: 600; margin-top: 4px; }
 .stock-warning { color: var(--warning); font-size: 12px; font-weight: 600; margin-top: 4px; }
 
+
+/* ── Report filter strip ──────────────────────────────────────────────────── */
+.report-filter-strip {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 16px;
+  background: #f8fafc;
+  border-bottom: 1px solid var(--card-border);
+}
+.report-filter-strip__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.report-filter-strip__lbl {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  margin-bottom: 0;
+}
+.report-filter-select {
+  width: auto !important;
+  min-width: 130px;
+  font-size: 12.5px;
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Coil Setup Wizard
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Step Progress Bar ── */
+.wizard-stepper {
+  display: flex;
+  align-items: center;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+  box-shadow: var(--card-shadow);
+  padding: 20px 28px;
+  gap: 0;
+}
+
+.wizard-step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 0 0 auto;
+}
+
+.wizard-step__num {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  flex-shrink: 0;
+  background: #e2e8f0;
+  color: #94a3b8;
+  transition: background var(--transition), color var(--transition), box-shadow var(--transition);
+}
+.wizard-step--active .wizard-step__num {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 0 0 4px rgba(99,102,241,.18);
+}
+.wizard-step--done .wizard-step__num {
+  background: var(--success);
+  color: #fff;
+}
+
+.wizard-step__text { line-height: 1.25; }
+.wizard-step__label {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  transition: color var(--transition);
+}
+.wizard-step--active .wizard-step__label,
+.wizard-step--done  .wizard-step__label { color: var(--text-primary); }
+
+.wizard-step__sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 1px;
+}
+
+.wizard-connector {
+  flex: 1;
+  height: 2px;
+  margin: 0 16px;
+  background: #e2e8f0;
+  border-radius: 1px;
+  transition: background var(--transition);
+}
+.wizard-connector--done { background: var(--success); }
+
+@media (max-width: 500px) {
+  .wizard-stepper    { padding: 14px 16px; }
+  .wizard-step__sub  { display: none; }
+  .wizard-connector  { margin: 0 8px; }
+}
+
+/* ── Coil Created Banner (Step 2) ── */
+.wizard-coil-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: var(--card-radius);
+  padding: 14px 18px;
+}
+.wizard-coil-banner__icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #dcfce7;
+  color: var(--success);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+.wizard-coil-banner__body { flex: 1; min-width: 0; }
+.wizard-coil-banner__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #166534;
+}
+.wizard-coil-banner__meta {
+  font-size: 12px;
+  color: #4ade80;
+  margin-top: 2px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+.wizard-coil-banner__dot { color: #86efac; }
+.wizard-coil-banner__check {
+  font-size: 22px;
+  color: var(--success);
+  flex-shrink: 0;
+}
+
+/* ── Product Rows (Step 2) ── */
+.wizard-product-row {
+  border: 1.5px solid var(--card-border);
+  border-radius: var(--radius-md);
+  margin-bottom: 10px;
+  background: var(--card-bg);
+  transition: border-color var(--transition), box-shadow var(--transition);
+  overflow: hidden;
+}
+.wizard-product-row:last-child { margin-bottom: 0; }
+
+.wizard-product-row--saved {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+.wizard-product-row--error {
+  border-color: #fca5a5;
+  background: #fef2f2;
+}
+
+.wizard-product-row__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #f8fafc;
+  border-bottom: 1px solid var(--card-border);
+}
+.wizard-product-row--saved .wizard-product-row__header {
+  background: #dcfce7;
+  border-bottom-color: #bbf7d0;
+}
+.wizard-product-row--error .wizard-product-row__header {
+  background: #fee2e2;
+  border-bottom-color: #fca5a5;
+}
+
+.wizard-product-row__num {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--accent-light);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.wizard-product-row__num--done {
+  background: #dcfce7;
+  color: var(--success);
+}
+
+.wizard-product-row__chips {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.wizard-product-row__body {
+  padding: 12px 14px;
+}
+
+/* ── Success Screen (Step 3) ── */
+.wizard-success {
+  text-align: center;
+  padding: 48px 24px 40px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+  box-shadow: var(--card-shadow);
+}
+.wizard-success__icon {
+  font-size: 64px;
+  color: var(--success);
+  line-height: 1;
+  margin-bottom: 16px;
+  animation: wizard-pop .4s cubic-bezier(.34,1.56,.64,1) both;
+}
+@keyframes wizard-pop {
+  from { transform: scale(0.4); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+.wizard-success__title {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+.wizard-success__sub {
+  font-size: 15px;
+  color: var(--text-secondary);
+  margin-bottom: 28px;
+}
+.wizard-success__summary {
+  display: inline-block;
+  text-align: left;
+  background: #f8fafc;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  padding: 16px 24px;
+  margin-bottom: 24px;
+  min-width: 280px;
+}
+.wizard-success__row {
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+.wizard-success__row:last-child { border-bottom: none; }
+.wizard-success__lbl {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.wizard-success__val {
+  font-size: 13.5px;
+  color: var(--text-primary);
+  text-align: right;
+}
+
+/* accent-soft badge used in success screen */
+.bg-accent-soft   { background: var(--accent-light) !important; }
+.text-accent      { color: var(--accent) !important; }
+.border-accent-soft { border-color: #c7d2fe !important; }
+

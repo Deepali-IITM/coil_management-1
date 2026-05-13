@@ -9,6 +9,7 @@ from flask import current_app as app, jsonify, request, render_template
 from flask_security import (
     auth_required, roles_required, verify_password, current_user, hash_password
 )
+from werkzeug.exceptions import Unauthorized
 from datetime import datetime, date, timedelta
 from sqlalchemy.orm import joinedload
 from sqlalchemy import func
@@ -22,6 +23,24 @@ from backend.models import (
 
 datastore = app.security.datastore
 cache     = app.cache
+
+
+# ── Error handlers ────────────────────────────────────────────────────────────
+
+@app.errorhandler(401)
+def handle_401(e):
+    return jsonify({"error": "Unauthorized. Please log in."}), 401
+
+@app.errorhandler(403)
+def handle_403(e):
+    return jsonify({"error": "Forbidden."}), 403
+
+
+# Flask-Security calls url_for('security.login') on unauthenticated token requests,
+# which fails because register_blueprint=False. Intercept it here.
+@app.security.unauthn_handler
+def handle_unauth(mechanisms, headers=None):
+    return jsonify({"error": "Unauthorized. Please log in."}), 401
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -287,10 +306,18 @@ def customer_info():
     customers = _party_q().all()
     if not customers:
         return jsonify({"message": "No customers found"}), 404
-    return jsonify([
-        {"id": c.id, "phone": c.phone, "name": c.name}
-        for c in customers
-    ])
+
+    result = []
+    for c in customers:
+        sales         = _sale_q().filter_by(party_id=c.id).all()
+        total_spent   = sum(s.total_amount or 0 for s in sales)
+        total_paid    = sum(s.amount_paid  or 0 for s in sales)
+        outstanding   = max(total_spent - total_paid, 0)
+        row           = c.to_dict()
+        row["total_purchases"] = total_spent
+        row["balance"]         = outstanding
+        result.append(row)
+    return jsonify(result)
 
 
 @app.route("/api/update/customer/<int:id>", methods=["GET", "POST"])
@@ -312,6 +339,8 @@ def update_customer(id):
 @auth_required("token")
 def delete_customer(id):
     customer = _party_q().filter_by(id=id).first_or_404()
+    if customer.sales.count() > 0:
+        return jsonify({"error": "Cannot delete — this customer has existing orders."}), 400
     db.session.delete(customer)
     db.session.commit()
     return jsonify({"message": "Customer deleted successfully"})
@@ -471,7 +500,7 @@ def manage_coils():
     )
     db.session.add(new_coil)
     db.session.commit()
-    return jsonify({"message": "New coil created successfully"}), 201
+    return jsonify({"message": "New coil created successfully", "id": new_coil.id}), 201
 
 
 @app.route("/api/update/coil/<int:id>", methods=["GET", "POST"])
@@ -505,6 +534,10 @@ def update_coil(id):
 @auth_required("token")
 def delete_coil(id):
     coil = _coil_q().filter_by(id=id).first_or_404()
+    if coil.products:
+        return jsonify({"error": "Cannot delete — this coil has linked products. Delete the products first."}), 400
+    if coil.sales_used_in.count() > 0:
+        return jsonify({"error": "Cannot delete — this coil is linked to existing sale orders."}), 400
     db.session.delete(coil)
     db.session.commit()
     return jsonify({"message": "Coil deleted successfully"})
@@ -559,10 +592,19 @@ def manage_sales():
         return jsonify([
             {
                 "id": sale.id,
-                "date": sale.date.strftime("%Y-%m-%d %H:%M:%S") if sale.date else None,
-                "party_id": sale.party_id,
-                "party_name": sale.party.name if sale.party else None,
-                "total_amount": sale.total_amount,
+                "invoice_number":    sale.invoice_number or f"INV-{sale.id:04d}",
+                "date":              sale.date.strftime("%Y-%m-%d %H:%M:%S") if sale.date else None,
+                "party_id":          sale.party_id,
+                "party_name":        sale.party.name if sale.party else None,
+                "total_amount":      sale.total_amount or 0,
+                "net_amount":        sale.net_amount or sale.total_amount or 0,
+                "discount":          sale.discount or 0,
+                "tax_rate":          sale.tax_rate or 0,
+                "amount_paid":       sale.amount_paid or 0,
+                "status":            sale.status or "confirmed",
+                "payment_status":    sale.payment_status or "pending",
+                "production_status": sale.production_status or "pending",
+                "notes":             sale.notes or "",
                 "used_coils": [
                     {
                         "id": sc.id, "coil_id": sc.coil_id,
@@ -628,10 +670,20 @@ def manage_sales():
             db.session.add(party)
             db.session.flush()
 
+    total_amount = float(data.get("total_amount", 0))
+    settings     = CompanySettings.query.filter_by(owner_id=oid).first()
+    prefix       = (settings and settings.invoice_prefix) or "INV"
+    sale_count   = Sale.query.filter_by(owner_id=oid).count() + 1
+    invoice_no   = f"{prefix}-{sale_count:04d}"
+
     sale = Sale(
         party_id=party.id,
-        total_amount=data.get("total_amount", 0),
+        total_amount=total_amount,
+        net_amount=total_amount,
+        payment_status="pending",
         production_status="pending",
+        status="confirmed",
+        invoice_number=invoice_no,
         owner_id=oid,
     )
     db.session.add(sale)
@@ -645,21 +697,39 @@ def manage_sales():
         sale_coil = SaleCoil(sale_id=sale.id, coil_id=coil_id)
         db.session.add(sale_coil)
         db.session.flush()
+        coil_used = 0.0
         for item in coil_group.get("items", []):
             if not item.get("length") or not item.get("quantity"):
                 continue
+            coil_used += float(item["length"]) * int(item["quantity"])
             db.session.add(SaleItem(
                 sale_coil_id=sale_coil.id, product_id=product_id,
                 length=item.get("length"), quantity=item.get("quantity"),
                 rate=item.get("rate", 0), amount=item.get("amount", 0),
                 is_custom=item.get("is_custom", False),
             ))
+        # Log stock movement
+        coil_obj = _coil_q().filter_by(id=coil_id).first()
+        if coil_obj and coil_used > 0:
+            db.session.add(StockMovement(
+                coil_id=coil_id, sale_id=sale.id,
+                movement=-coil_used, description=f"Sale {invoice_no}", owner_id=oid,
+            ))
+            _check_low_stock(coil_obj, oid)
+
+    # Update party totals
+    party.total_purchases = (party.total_purchases or 0) + total_amount
+    party.balance         = (party.balance or 0) + total_amount
+
+    _audit("create_sale", "sale", sale.id, f"invoice={invoice_no} amount={total_amount}")
+    _notify(oid, "order", f"New Order #{invoice_no}",
+            f"Order for {party.name} — ₹{total_amount:,.0f}", link="/view_all_orders")
 
     db.session.commit()
     return jsonify({
         "message": "Sale created successfully",
         "sale_id": sale.id,
-        "invoice_number": sale.invoice_number or f"INV-{sale.id:04d}",
+        "invoice_number": invoice_no,
     }), 201
 
 
@@ -688,12 +758,17 @@ def _all_orders_json(base_query):
             "date":              sale.date.strftime("%Y-%m-%d") if sale.date else None,
             "owner_id":          sale.owner_id,
             "party":             {"id": sale.party.id, "name": sale.party.name, "phone": sale.party.phone},
-            "total_amount":      sale.total_amount,
-            "net_amount":        sale.net_amount or sale.total_amount,
+            "total_amount":      sale.total_amount or 0,
+            "discount":          sale.discount or 0,
+            "tax_rate":          sale.tax_rate or 0,
+            "tax_amount":        sale.tax_amount or 0,
+            "net_amount":        sale.net_amount or sale.total_amount or 0,
             "status":            sale.status or "confirmed",
             "payment_status":    sale.payment_status or "pending",
             "production_status": sale.production_status or "pending",
             "amount_paid":       sale.amount_paid or 0,
+            "notes":             sale.notes or "",
+            "transport_details": sale.transport_details or "",
             "used_coils":        [],
         }
         for sc in sale.used_coils:
@@ -1043,7 +1118,12 @@ def update_sale_status(sale_id):
 def update_payment(sale_id):
     sale = _sale_q().filter_by(id=sale_id).first_or_404()
     data = request.json
-    amount = float(data.get("amount_paid", 0))
+    try:
+        amount = float(data.get("amount_paid", 0))
+    except (TypeError, ValueError):
+        return jsonify({"error": "Invalid amount_paid value."}), 400
+    if amount < 0:
+        return jsonify({"error": "Payment amount cannot be negative."}), 400
     sale.amount_paid = amount
     net = sale.net_amount or sale.total_amount or 0
     if amount <= 0:
@@ -1361,7 +1441,7 @@ def customer_analytics(customer_id):
     sales = _sale_q().filter_by(party_id=customer_id).all()
 
     total_orders   = len(sales)
-    total_spent    = sum(s.total_amount or 0 for s in sales)
+    total_spent    = sum(s.net_amount or s.total_amount or 0 for s in sales)
     total_paid     = sum(s.amount_paid or 0 for s in sales)
     outstanding    = max(total_spent - total_paid, 0)
     recent_orders  = sorted(sales, key=lambda s: s.date or datetime.min, reverse=True)[:5]
@@ -1475,6 +1555,7 @@ def sales_report():
                 "paid": s.amount_paid or 0,
                 "status": s.status or "confirmed",
                 "payment_status": s.payment_status or "pending",
+                "production_status": s.production_status or "pending",
             }
             for s in sales
         ]
@@ -1544,6 +1625,28 @@ def create_enhanced_sale():
         return jsonify({"error": "Party name is required"}), 400
 
     oid = _owner_id() if not _is_admin() else None
+
+    # ── Stock validation: check all coil groups before touching DB ──────────
+    stock_errors = []
+    for cg in data.get("coils", []):
+        coil_id = cg.get("coil_id")
+        if not coil_id:
+            continue
+        coil = _coil_q().filter_by(id=coil_id).first()
+        if not coil:
+            stock_errors.append(f"Coil ID {coil_id} not found.")
+            continue
+        ordered = sum(
+            float(it.get("length", 0)) * int(it.get("quantity", 0))
+            for it in cg.get("items", [])
+        )
+        _, remaining = _calc_remaining(coil)
+        if ordered > remaining + 1e-6:
+            stock_errors.append(
+                f"Coil {coil.coil_number}: ordered {ordered:.2f} m but only {remaining:.2f} m available."
+            )
+    if stock_errors:
+        return jsonify({"error": " | ".join(stock_errors), "stock_error": True}), 422
 
     customer_id = data.get("customer_id")
     if customer_id:

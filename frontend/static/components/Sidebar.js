@@ -38,6 +38,11 @@ export default {
           <span class="sidebar-link__label">Dashboard</span>
         </router-link>
 
+        <router-link to="/coil-setup" class="sidebar-link" active-class="sidebar-link--active">
+          <i class="bi bi-magic"></i>
+          <span class="sidebar-link__label">Coil Setup</span>
+        </router-link>
+
         <router-link to="/coil_info" class="sidebar-link" active-class="sidebar-link--active">
           <i class="bi bi-layers"></i>
           <span class="sidebar-link__label">Coils</span>

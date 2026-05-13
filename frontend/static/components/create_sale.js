@@ -166,9 +166,9 @@ export default {
           <table class="table table-bordered align-middle mb-0">
             <thead class="table-head-accent">
               <tr>
-                <th style="width:28%">Length (m) <span class="text-danger">*</span></th>
+                <th style="width:28%">Length (ft) <span class="text-danger">*</span></th>
                 <th style="width:18%">Qty <span class="text-danger">*</span></th>
-                <th style="width:22%">Rate (₹/m) <span class="text-danger">*</span></th>
+                <th style="width:22%">Rate (₹/ft) <span class="text-danger">*</span></th>
                 <th style="width:22%">Amount (₹)</th>
                 <th style="width:10%"></th>
               </tr>

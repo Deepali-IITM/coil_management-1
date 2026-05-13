@@ -25,15 +25,17 @@ export default {
     <!-- ── Sales Report ── -->
     <template v-if="tab === 'sales'">
       <div class="card mt-3">
+
+        <!-- Period selector row -->
         <div class="card-header d-flex align-items-center gap-3 flex-wrap">
           <h5 class="mb-0"><i class="bi bi-receipt-cutoff me-2 text-primary"></i>Sales Report</h5>
-          <div class="d-flex gap-2 ms-auto flex-wrap">
+          <div class="d-flex gap-2 ms-auto flex-wrap align-items-center">
             <select class="form-select form-select-sm" style="width:140px;" v-model="salesFilter.period" @change="loadSales">
               <option value="today">Today</option>
               <option value="week">This Week</option>
               <option value="month">This Month</option>
               <option value="year">This Year</option>
-              <option value="custom">Custom</option>
+              <option value="custom">Custom Range</option>
             </select>
             <template v-if="salesFilter.period === 'custom'">
               <input type="date" class="form-control form-control-sm" v-model="salesFilter.start" style="width:140px;" />
@@ -43,57 +45,102 @@ export default {
           </div>
         </div>
 
+        <!-- Filter strip -->
+        <div v-if="salesData" class="report-filter-strip">
+          <span class="report-filter-strip__label"><i class="bi bi-funnel me-1"></i>Filter</span>
+
+          <div class="d-flex align-items-center gap-1">
+            <label class="report-filter-strip__lbl">Order Status</label>
+            <select class="form-select form-select-sm report-filter-select" v-model="salesFilter.production">
+              <option value="">All</option>
+              <option value="pending">Pending</option>
+              <option value="in_progress">In Progress</option>
+              <option value="completed">Completed</option>
+            </select>
+          </div>
+
+          <div class="d-flex align-items-center gap-1">
+            <label class="report-filter-strip__lbl">Payment</label>
+            <select class="form-select form-select-sm report-filter-select" v-model="salesFilter.payment">
+              <option value="">All</option>
+              <option value="paid">Paid</option>
+              <option value="partial">Partial</option>
+              <option value="pending">Pending</option>
+            </select>
+          </div>
+
+          <button v-if="isFiltered" class="btn btn-sm btn-outline-secondary" @click="clearFilters">
+            <i class="bi bi-x-lg me-1"></i>Clear
+          </button>
+
+          <span class="ms-auto text-muted" style="font-size:12px; white-space:nowrap;">
+            {{ filteredOrders.length }} of {{ salesData.orders.length }} order{{ salesData.orders.length !== 1 ? 's' : '' }}
+          </span>
+        </div>
+
         <div v-if="salesLoading" class="text-center py-4">
           <div class="spinner-border text-primary"></div>
         </div>
 
         <template v-else-if="salesData">
-          <!-- KPI bar -->
+          <!-- KPI bar — recomputed from filtered rows -->
           <div class="report-kpi-bar">
             <div class="report-kpi">
-              <div class="report-kpi__value">{{ fmt(salesData.total_revenue) }}</div>
-              <div class="report-kpi__label">Total Revenue</div>
+              <div class="report-kpi__value">{{ fmt(kpis.revenue) }}</div>
+              <div class="report-kpi__label">Revenue</div>
             </div>
             <div class="report-kpi">
-              <div class="report-kpi__value">{{ salesData.total_orders }}</div>
+              <div class="report-kpi__value">{{ kpis.orders }}</div>
               <div class="report-kpi__label">Orders</div>
             </div>
             <div class="report-kpi text-success">
-              <div class="report-kpi__value">{{ salesData.paid_orders }}</div>
+              <div class="report-kpi__value">{{ kpis.paid }}</div>
               <div class="report-kpi__label">Paid</div>
             </div>
+            <div class="report-kpi">
+              <div class="report-kpi__value">{{ kpis.inProgress }}</div>
+              <div class="report-kpi__label">In Progress</div>
+            </div>
             <div class="report-kpi text-warning">
-              <div class="report-kpi__value">{{ fmt(salesData.pending_amount) }}</div>
-              <div class="report-kpi__label">Pending</div>
+              <div class="report-kpi__value">{{ fmt(kpis.outstanding) }}</div>
+              <div class="report-kpi__label">Outstanding</div>
             </div>
           </div>
 
-          <!-- Table -->
+          <!-- Orders table -->
           <div class="table-responsive">
             <table class="table table-hover mb-0">
               <thead class="table-head-accent">
                 <tr>
-                  <th>Invoice</th><th>Date</th><th>Customer</th>
+                  <th>Invoice</th>
+                  <th>Date</th>
+                  <th>Customer</th>
                   <th class="text-end">Amount</th>
                   <th class="text-end">Net</th>
                   <th class="text-end">Paid</th>
-                  <th class="text-center">Order</th>
+                  <th class="text-center">Order Status</th>
                   <th class="text-center">Payment</th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-if="!salesData.orders.length">
-                  <td colspan="8" class="text-center text-muted py-4">No orders in this period.</td>
+                <tr v-if="!filteredOrders.length">
+                  <td colspan="8" class="text-center text-muted py-5">
+                    <i class="bi bi-inbox display-4 d-block mb-2 opacity-25"></i>
+                    <span v-if="isFiltered">No orders match the selected filters.</span>
+                    <span v-else>No orders in this period.</span>
+                  </td>
                 </tr>
-                <tr v-for="o in salesData.orders" :key="o.id">
+                <tr v-for="o in filteredOrders" :key="o.id">
                   <td class="fw-semibold text-primary">{{ o.invoice_number }}</td>
-                  <td>{{ o.date }}</td>
+                  <td class="text-muted">{{ o.date }}</td>
                   <td>{{ o.party }}</td>
                   <td class="text-end">{{ fmt(o.amount) }}</td>
                   <td class="text-end fw-semibold">{{ fmt(o.net_amount) }}</td>
                   <td class="text-end text-success">{{ fmt(o.paid) }}</td>
                   <td class="text-center">
-                    <span class="badge" :class="orderBadge(o.status)">{{ capitalize(o.status) }}</span>
+                    <span class="badge" :class="prodBadge(o.production_status)">
+                      {{ prodLabel(o.production_status) }}
+                    </span>
                   </td>
                   <td class="text-center">
                     <span class="badge" :class="payBadge(o.payment_status)">{{ capitalize(o.payment_status) }}</span>
@@ -215,12 +262,43 @@ export default {
       salesData: null,
       coilData: [],
       alerts: [],
-      salesFilter: { period: "month", start: "", end: "" },
+      salesFilter: { period: "month", start: "", end: "", production: "", payment: "" },
     };
+  },
+
+  computed: {
+    filteredOrders() {
+      if (!this.salesData) return [];
+      return this.salesData.orders.filter(o => {
+        if (this.salesFilter.production && o.production_status !== this.salesFilter.production) return false;
+        if (this.salesFilter.payment    && o.payment_status    !== this.salesFilter.payment)    return false;
+        return true;
+      });
+    },
+
+    kpis() {
+      const orders = this.filteredOrders;
+      return {
+        orders:      orders.length,
+        revenue:     orders.reduce((s, o) => s + (o.net_amount || o.amount || 0), 0),
+        paid:        orders.filter(o => o.payment_status === "paid").length,
+        inProgress:  orders.filter(o => o.production_status === "in_progress").length,
+        outstanding: orders.reduce((s, o) => s + Math.max((o.net_amount || o.amount || 0) - (o.paid || 0), 0), 0),
+      };
+    },
+
+    isFiltered() {
+      return !!(this.salesFilter.production || this.salesFilter.payment);
+    },
   },
 
   methods: {
     token() { return localStorage.getItem("auth-token"); },
+
+    clearFilters() {
+      this.salesFilter.production = "";
+      this.salesFilter.payment    = "";
+    },
 
     async loadSales() {
       this.salesLoading = true;
@@ -259,7 +337,9 @@ export default {
     utilClass(p) { if (p >= 100) return "fill-danger"; if (p >= 80) return "fill-warning"; return "fill-success"; },
     stockBadge(s) { return { exhausted: "bg-danger", low: "bg-warning text-dark", healthy: "bg-success" }[s] || "bg-secondary"; },
     orderBadge(s) { return { confirmed: "bg-primary", draft: "bg-secondary", cancelled: "bg-danger" }[s] || "bg-secondary"; },
-    payBadge(s) { return { paid: "bg-success", partial: "bg-warning text-dark", pending: "bg-danger" }[s] || "bg-secondary"; },
+    payBadge(s)   { return { paid: "bg-success", partial: "bg-warning text-dark", pending: "bg-danger" }[s] || "bg-secondary"; },
+    prodBadge(s)  { return { pending: "bg-secondary", in_progress: "bg-primary", completed: "bg-success" }[s] || "bg-secondary"; },
+    prodLabel(s)  { return { pending: "Pending", in_progress: "In Progress", completed: "Completed" }[s] || capitalize(s || "—"); },
   },
 
   mounted() { this.loadSales(); },

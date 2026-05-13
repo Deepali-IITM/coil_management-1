@@ -49,7 +49,7 @@ export default {
 
           <div class="row g-3 mb-3">
             <div class="col-md-4">
-              <label class="form-label">Total Weight (kg)</label>
+              <label class="form-label">Total Weight (tonnes)</label>
               <input type="number" step="0.01" min="0" class="form-control"
                      v-model.number="coil.total_weight" placeholder="0.00" />
             </div>

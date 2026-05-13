@@ -451,29 +451,45 @@ from sqlalchemy import func, extract
 from datetime import datetime, timedelta
 from models import db, Party, Coil, Product, Sale, SaleItem, SaleCoil
 
+
 class DashboardAPI(Resource):
     @auth_required("token")
     @roles_required("admin")
     def get(self):
-        # Total counts
+        # --- Overall Counts ---
         total_coils = Coil.query.count()
         total_products = Product.query.count()
-        active_orders = Sale.query.filter(Sale.total_amount == None).count()  # Or define active logic better
-        finished_coils = Coil.query.filter(
-            ~Coil.sales_used_in.any()
-        ).count()  # coils not linked to any sales
+        active_orders = Sale.query.filter(Sale.total_amount == None).count()  # Active sales not finalized
+        finished_coils = Coil.query.filter(~Coil.sales_used_in.any()).count()  # Coils not linked to any sale
 
-        # Remaining material (sum of coil.total_weight minus used material)
+        # --- Remaining Material Calculation ---
         remaining_material = 0
+        coil_details = []
+
         for coil in Coil.query.all():
             total_used = 0
+
+            # Calculate how much material is used in this coil
             for sale_coil in coil.sales_used_in:
                 for item in sale_coil.items:
                     total_used += (item.length * item.quantity)
-            if coil.total_weight:
-                remaining_material += max(coil.total_weight - total_used, 0)
 
-        # Sales Trend (last 6 months)
+            # Compute remaining
+            remaining = max((coil.total_weight or 0) - total_used, 0)
+            remaining_material += remaining
+
+            # Store individual coil info
+            coil_details.append({
+                "coil_number": coil.coil_number,
+                "make": coil.make,
+                "type": coil.type,
+                "color": coil.color,
+                "total_weight": float(coil.total_weight or 0),
+                "used_weight": float(total_used),
+                "remaining_weight": float(remaining)
+            })
+
+        # --- Sales Trend (Last 6 Months) ---
         six_months_ago = datetime.now() - timedelta(days=180)
         sales_trend = (
             db.session.query(
@@ -485,17 +501,20 @@ class DashboardAPI(Resource):
             .order_by(extract("month", Sale.date))
             .all()
         )
+
         sales_trend_data = [
             {"month": int(month), "total": float(total or 0)} for month, total in sales_trend
         ]
 
+        # --- Final JSON Response ---
         return {
             "total_coils": total_coils,
             "total_products": total_products,
             "active_orders": active_orders,
             "finished_coils": finished_coils,
-            "remaining_material": remaining_material,
+            "remaining_material": float(remaining_material),
             "sales_trend": sales_trend_data,
+            "coil_details": coil_details,  # 👈 added table data for frontend
         }
 
 

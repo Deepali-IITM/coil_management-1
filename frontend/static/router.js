@@ -9,7 +9,8 @@ import Products         from "./components/product_info.js";
 import Sales            from "./components/create_sale.js";
 import ProductForm      from "./components/productform.js";
 import UpdateProductForm from "./components/updateproductform.js";
-import CoilForm         from "./components/coilform.js";
+import CoilForm              from "./components/coilform.js";
+import CreateCoilProducts   from "./components/CreateCoilProducts.js";
 import SaleOrder        from "./components/view_sale_order.js";
 import UpdateCoilForm   from "./components/updatecoilform.js";
 import SearchResults    from "./components/searchresults.js";
@@ -36,6 +37,7 @@ const routes = [
     { path: "/customer_info",     component: Customers,         meta: { requiresAuth: true, ownerOnly: true } },
     { path: "/create_sale_order", component: Sales,             meta: { requiresAuth: true, ownerOnly: true } },
     { path: "/create-coil",       component: CoilForm,          meta: { requiresAuth: true, ownerOnly: true } },
+    { path: "/coil-setup",        component: CreateCoilProducts, meta: { requiresAuth: true, ownerOnly: true } },
     { path: "/update-coil",       component: UpdateCoilForm,    meta: { requiresAuth: true, ownerOnly: true } },
     { path: "/create-product",    component: ProductForm,       meta: { requiresAuth: true, ownerOnly: true } },
     { path: "/update-product",    component: UpdateProductForm, meta: { requiresAuth: true, ownerOnly: true } },

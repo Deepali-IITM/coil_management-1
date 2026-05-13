@@ -1,41 +1,38 @@
 const store = new Vuex.Store({
-    state : {
-        // like data
-        auth_token : null,
-        role : null,
-        loggedIn : false,
-        user_id : null,
+    state: {
+        auth_token: null,
+        role: null,
+        loggedIn: false,
+        user_id: null,
     },
-    mutations : {
-        // functions that change state
+    mutations: {
         setUser(state) {
-            try{
-             if (JSON.parse(localStorage.getItem('user'))){
-                const user = JSON.parse(localStorage.getItem('user'));
-                state.auth_token = user.token;
-                state.role = user.role;
-                state.loggedIn = true;
-                state.user_id = user.id;
-             }
+            try {
+                // Support both 'user' object and individual keys
+                const token = localStorage.getItem("auth-token");
+                const role = localStorage.getItem("role");
+                const userId = localStorage.getItem("user_id");
+                if (token) {
+                    state.auth_token = token;
+                    state.role = role;
+                    state.loggedIn = true;
+                    state.user_id = userId;
+                }
             } catch {
-                console.warn('not logged in')
-        }         
+                console.warn("Could not restore user session");
+            }
         },
 
-        logout(state){
+        logout(state) {
             state.auth_token = null;
             state.role = null;
             state.loggedIn = false;
             state.user_id = null;
-
-            localStorage.removeItem('user')
         }
     },
-    actions : {
-        // actions commit mutations can be async
-    }
-})
+    actions: {}
+});
 
-store.commit('setUser')
+store.commit("setUser");
 
 export default store;
