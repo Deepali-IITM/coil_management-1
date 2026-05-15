@@ -72,10 +72,14 @@ new Vue({
   store,
 
   data() {
+    // In Electron, window.innerWidth is 0 while the BrowserWindow is hidden
+    // (show:false). The preload script exposes electronAPI before any JS runs,
+    // so we can reliably detect Electron here and skip mobile detection.
+    const isElectron = !!(window.electronAPI?.isElectron);
     return {
       sidebarCollapsed: false,
       authKey: 0,
-      isMobile: window.innerWidth < 768,
+      isMobile: isElectron ? false : window.innerWidth < 768,
     };
   },
 
