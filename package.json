@@ -1,0 +1,56 @@
+{
+  "name": "coilms",
+  "version": "1.0.0",
+  "description": "Coil & Sheet Metal Management System",
+  "main": "electron/main.js",
+  "scripts": {
+    "electron:dev":   "electron .",
+    "electron:build": "electron-builder --win --x64",
+    "cap:prepare":    "bash scripts/prepare_www.sh",
+    "cap:sync":       "bash scripts/prepare_www.sh && npx cap sync android",
+    "cap:apk":        "bash scripts/build_android.sh",
+    "cap:open":       "npx cap open android"
+  },
+  "devDependencies": {
+    "electron":         "^31.0.0",
+    "electron-builder": "^24.9.0"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.0.0",
+    "@capacitor/cli":     "^6.0.0",
+    "@capacitor/core":    "^6.0.0"
+  },
+  "build": {
+    "appId":       "com.coilms.app",
+    "productName": "CoilMS",
+    "directories": { "output": "dist_electron" },
+    "files": [
+      "electron/**/*",
+      "frontend/**/*",
+      "backend/**/*",
+      "app.py",
+      "gunicorn.conf.py",
+      "requirements.txt"
+    ],
+    "extraResources": [
+      { "from": "dist_server/", "to": "server/", "filter": ["**/*"] }
+    ],
+    "win": {
+      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "icon": "frontend/static/icons/icon-192.png"
+    },
+    "linux": {
+      "target": [{ "target": "AppImage", "arch": ["x64"] }],
+      "icon": "frontend/static/icons/icon-512.png"
+    },
+    "mac": {
+      "target": [{ "target": "dmg", "arch": ["x64", "arm64"] }],
+      "icon": "frontend/static/icons/icon-512.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    }
+  }
+}

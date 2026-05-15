@@ -1,48 +1,74 @@
-import router from "./router.js"
+import router         from "./router.js";
+import { API_BASE }  from "./js/config.js";
+import { localdb }   from "./js/localdb.js";
 
-export const fetchWithAuth = async (url = '/', options = {auth : true}) => {
-    const origin = window.location.origin;
-    
-    // Parse the stored user to get the authentication token
-    const user = JSON.parse(localStorage.getItem('user'));
-    const authToken = user?.['token']; // Get the auth token, if it exists
-  
-    // If authentication is required and no token is found, handle accordingly
-    if (options.auth && !authToken) {
-      console.error('Authentication token is missing.');
-      // Optionally, redirect to login or return an error
+const WRITE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
+export const fetchWithAuth = async (url = '/', options = { auth: true }) => {
+  const token = localStorage.getItem('user')
+    ? JSON.parse(localStorage.getItem('user'))?.token
+    : localStorage.getItem('auth-token');
+
+  if (options.auth && !token) {
+    router.push('/user_login');
+    return;
+  }
+
+  const method = (options.method ?? 'GET').toUpperCase();
+
+  const fetchOptions = {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authentication-Token': token } : {}),
+      ...options.headers,
+    },
+    ...(options.body ? { body: JSON.stringify(options.body) } : {}),
+    mode: 'cors',
+  };
+
+  // Remove keys that are not valid fetch options to avoid TypeError
+  const { auth: _auth, ...rest } = options;
+  Object.assign(fetchOptions, rest);
+  // Restore correct body (stringify from options.body, not raw options)
+  if (options.body) fetchOptions.body = JSON.stringify(options.body);
+
+  try {
+    const res = await fetch(`${API_BASE}${url}`, fetchOptions);
+
+    if (res.status === 403 || res.status === 405) {
       router.push('/user_login');
       return;
     }
-  
-    // Build the full request options object
-    const fetchOptions = {
-      method: options.method ?? 'GET', // Default to GET method
-      headers: {
-        'Content-Type': 'application/json',
-        ...(authToken ? { 'Authentication-Token': authToken } : {}), // Include token if available
-        ...options.headers, // Merge additional headers if provided
-      },
-      ...(options.body ? { body: JSON.stringify(options.body) } : {}), // Stringify the body if provided
-      ...options, // Merge any other options provided
-      mode: 'cors',
-    };
-  
-    try {
-      // Make the fetch request
-      const res = await fetch(`${origin}${url}`, fetchOptions);
-  
-      // If response is forbidden, redirect to login
-      if (res.status === 403 || res.status === 405) {
-        router.push('/user_login');
-        return;
+
+    return res;
+
+  } catch (err) {
+    // ── Offline fallback ───────────────────────────────────────────────────
+
+    if (!navigator.onLine) {
+      if (WRITE_METHODS.has(method)) {
+        // Queue the write for later sync
+        try {
+          await localdb.queueMutation({ endpoint: url, method, body: options.body });
+        } catch (dbErr) {
+          console.warn('[offline] Failed to queue mutation:', dbErr);
+        }
+        // Return a synthetic 202 so the calling component doesn't crash
+        return new Response(
+          JSON.stringify({ message: 'Saved offline — will sync when reconnected.', offline_queued: true }),
+          { status: 202, headers: { 'Content-Type': 'application/json', 'X-Offline-Queued': 'true' } }
+        );
       }
-  
-      return res; // Return the response object
-  
-    } catch (error) {
-      console.error('Fetch error:', error);
-      // Handle errors (e.g., network issues)
-      throw error;
+
+      // For GETs, the service worker already serves cached data automatically.
+      // If we still end up here it means the SW didn't intercept (e.g. first visit).
+      return new Response(
+        JSON.stringify({ error: 'offline', message: 'No cached data available yet.' }),
+        { status: 503, headers: { 'Content-Type': 'application/json' } }
+      );
     }
-  };
+
+    throw err;
+  }
+};

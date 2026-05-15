@@ -3,9 +3,9 @@ import store             from "./store.js";
 import Sidebar           from "./components/Sidebar.js";
 import TopBar            from "./components/TopBar.js";
 import NotificationBell  from "./components/NotificationBell.js";
+import OfflineBar        from "./components/OfflineBar.js";
 import { installToast }  from "./components/Toast.js";
 
-/* Public routes that use the full-screen layout (no sidebar) */
 const PUBLIC_ROUTES = new Set(["/app_info", "/user_login"]);
 
 /* Global: click-outside directive */
@@ -19,7 +19,6 @@ Vue.directive("click-outside", {
   },
 });
 
-/* Install toast globally → this.$toast.success("…") */
 installToast(Vue);
 
 new Vue({
@@ -28,23 +27,18 @@ new Vue({
   template: `
   <div class="app-shell">
 
-    <!-- Sidebar (authenticated layout only) -->
-    <transition name="sidebar-slide">
-      <Sidebar
-        v-if="showSidebar"
-        :collapsed="sidebarCollapsed"
-        :key="authKey"
-      />
-    </transition>
+    <Sidebar
+      v-if="showSidebar"
+      :collapsed="sidebarCollapsed"
+      :key="authKey"
+    />
 
-    <!-- Mobile overlay -->
     <div
       v-if="showSidebar && !sidebarCollapsed && isMobile"
       class="sidebar-overlay"
       @click="sidebarCollapsed = true"
     ></div>
 
-    <!-- Main area -->
     <div
       class="app-main"
       :class="{
@@ -57,7 +51,6 @@ new Vue({
         :key="'tb-' + authKey"
         @toggle-sidebar="toggleSidebar"
       >
-        <!-- Notification bell slot (only for owners) -->
         <template v-slot:actions v-if="showSidebar && isOwner">
           <NotificationBell />
         </template>
@@ -68,10 +61,13 @@ new Vue({
       </main>
     </div>
 
+    <!-- Offline / pending-sync banner — fixed to bottom of viewport -->
+    <OfflineBar v-if="showSidebar" />
+
   </div>
   `,
 
-  components: { Sidebar, TopBar, NotificationBell },
+  components: { Sidebar, TopBar, NotificationBell, OfflineBar },
   router,
   store,
 

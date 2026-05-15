@@ -1980,3 +1980,36 @@ body {
 .import-stat--info    { background: #e0e7ff; color: #3730a3; }
 .import-stat--danger  { background: #fee2e2; color: #991b1b; }
 
+/* ── Offline / sync status bar ────────────────────────────────────────────── */
+.offline-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1055;
+  min-height: 38px;
+  font-size: 13px;
+  box-shadow: 0 -2px 8px rgba(0,0,0,.15);
+}
+
+/* Slide-up transition for the offline bar */
+.offline-slide-enter-active,
+.offline-slide-leave-active { transition: transform .25s ease, opacity .25s ease; }
+.offline-slide-enter,
+.offline-slide-leave-to     { transform: translateY(100%); opacity: 0; }
+
+/* Nudge main content up so the bar doesn't overlap last row */
+.app-main:has(+ .offline-bar) {
+  padding-bottom: 38px;
+}
+
+/* Desktop-feel: suppress text selection in nav/sidebar elements */
+.sidebar-nav,
+.topbar,
+.offline-bar { user-select: none; }
+
+/* PWA / standalone mode: hide browser chrome padding */
+@media (display-mode: standalone) {
+  body { padding-bottom: env(safe-area-inset-bottom); }
+}
+

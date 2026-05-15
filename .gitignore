@@ -24,3 +24,17 @@ req.txt
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# Node / Electron / Capacitor build artifacts
+node_modules/
+dist/
+dist_electron/
+dist_server/
+www/
+android/
+ios/
+*.apk
+
+# PyInstaller
+build/
+*.spec
