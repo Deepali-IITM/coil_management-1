@@ -1,0 +1,72 @@
+name: Build Windows Installer
+
+on:
+  workflow_dispatch:   # trigger manually from GitHub Actions tab
+  push:
+    tags:
+      - 'v*'           # or auto-trigger on version tags like v1.0.0
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Python dependencies + PyInstaller
+        run: |
+          pip install --upgrade pip setuptools
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Bundle Flask server with PyInstaller
+        run: |
+          pyinstaller --onefile --name coilms_server `
+            --add-data "backend;backend" `
+            --add-data "frontend;frontend" `
+            --hidden-import=flask `
+            --hidden-import=flask_sqlalchemy `
+            --hidden-import=flask_security `
+            --hidden-import=flask_login `
+            --hidden-import=flask_principal `
+            --hidden-import=flask_wtf `
+            --hidden-import=flask_caching `
+            --hidden-import=flask_cors `
+            --hidden-import=flask_excel `
+            --hidden-import=sqlalchemy `
+            --hidden-import=passlib `
+            --hidden-import=passlib.pwd `
+            --hidden-import=passlib.handlers `
+            --hidden-import=passlib.handlers.bcrypt `
+            --hidden-import=email_validator `
+            --hidden-import=psycopg2 `
+            --hidden-import=pkg_resources `
+            app.py
+          New-Item -ItemType Directory -Force -Path dist_server
+          Copy-Item dist\coilms_server.exe dist_server\
+
+      - name: Install Node dependencies
+        run: npm install
+
+      - name: Build Electron installer
+        run: npm run electron:build
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CoilMS-Windows-Installer
+          path: dist_electron/*.exe
+          retention-days: 30

@@ -48,7 +48,19 @@ function startFlask(port) {
     const exe = process.platform === 'win32' ? 'coilms_server.exe' : 'coilms_server';
     cmd  = path.join(process.resourcesPath, 'server', exe);
     args = [];
-    opts = { env: { ...process.env, PORT: String(port), ELECTRON_RUN: '1' } };
+    // Store the SQLite DB in the user's AppData folder so it survives updates
+    // and isn't blocked by Program Files write restrictions.
+    const dataDir = app.getPath('userData');
+    const dbPath  = path.join(dataDir, 'database.sqlite3');
+    opts = {
+      env: {
+        ...process.env,
+        PORT:         String(port),
+        ELECTRON_RUN: '1',
+        DATABASE_URL: `sqlite:///${dbPath}`,
+        INSTANCE_PATH: dataDir,
+      },
+    };
   } else {
     // Development: run flask directly from the project root
     const python = process.platform === 'win32' ? 'python' : 'python3';

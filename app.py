@@ -29,10 +29,16 @@ from backend.models import db, User, Role
 
 
 def createApp():
+    # When running inside Electron, use the OS user-data dir for the instance
+    # folder so the SQLite database survives app updates and isn't placed in
+    # a read-only Program Files directory.
+    instance_path = os.environ.get("INSTANCE_PATH") or None
+
     app = Flask(
         __name__,
         template_folder="frontend/templates",
         static_folder="frontend/static",
+        instance_path=instance_path,
     )
 
     # Allow all origins in production (Render URL is unknown at build time).
