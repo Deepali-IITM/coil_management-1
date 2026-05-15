@@ -106,10 +106,12 @@ function startFlask(port) {
     opts = {
       env: {
         ...process.env,
-        PORT:          String(port),
-        ELECTRON_RUN:  '1',
-        DATABASE_URL:  `sqlite:///${dbPath}`,
-        INSTANCE_PATH: dataDir,
+        PORT:             String(port),
+        ELECTRON_RUN:     '1',
+        DATABASE_URL:     `sqlite:///${dbPath}`,
+        INSTANCE_PATH:    dataDir,
+        PYTHONUTF8:       '1',
+        PYTHONIOENCODING: 'utf-8',
       },
     };
   } else {

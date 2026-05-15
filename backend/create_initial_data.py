@@ -87,6 +87,6 @@ with app.app_context():
         db.session.add(party)
         db.session.commit()
 
-    print("✅ Initial data populated successfully.")
+    print("[OK] Initial data populated successfully.")
     print("   Super Admin : admin@coilms.in  /  Admin@123")
     print("   Coil Manager: owner@coilms.in  /  Owner@123")
