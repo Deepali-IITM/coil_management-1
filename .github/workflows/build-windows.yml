@@ -1,10 +1,10 @@
 name: Build Windows Installer
 
 on:
-  workflow_dispatch:   # trigger manually from GitHub Actions tab
+  workflow_dispatch:
   push:
     tags:
-      - 'v*'           # or auto-trigger on version tags like v1.0.0
+      - 'v*'
 
 jobs:
   build:
@@ -30,31 +30,16 @@ jobs:
           pip install -r requirements.txt
           pip install pyinstaller
 
-      - name: Bundle Flask server with PyInstaller
+      - name: Bundle Flask server with PyInstaller (spec file)
         run: |
-          pyinstaller --onefile --name coilms_server `
-            --add-data "backend;backend" `
-            --add-data "frontend;frontend" `
-            --hidden-import=flask `
-            --hidden-import=flask_sqlalchemy `
-            --hidden-import=flask_security `
-            --hidden-import=flask_login `
-            --hidden-import=flask_principal `
-            --hidden-import=flask_wtf `
-            --hidden-import=flask_caching `
-            --hidden-import=flask_cors `
-            --hidden-import=flask_excel `
-            --hidden-import=sqlalchemy `
-            --hidden-import=passlib `
-            --hidden-import=passlib.pwd `
-            --hidden-import=passlib.handlers `
-            --hidden-import=passlib.handlers.bcrypt `
-            --hidden-import=email_validator `
-            --hidden-import=psycopg2 `
-            --hidden-import=pkg_resources `
-            app.py
+          pyinstaller coilms_server.spec
           New-Item -ItemType Directory -Force -Path dist_server
           Copy-Item dist\coilms_server.exe dist_server\
+          if (-not (Test-Path dist_server\coilms_server.exe)) {
+            Write-Error "coilms_server.exe not found after PyInstaller build"
+            exit 1
+          }
+          Write-Host "Bundle size: $((Get-Item dist_server\coilms_server.exe).Length / 1MB) MB"
 
       - name: Install Node dependencies
         run: npm install
