@@ -1,4 +1,24 @@
 import os
+import sys
+import types
+
+# passlib.pwd (used by flask-security-too) calls `import pkg_resources` to
+# load its wordset files. pkg_resources ships with setuptools which is not
+# pre-installed on Python 3.12+. Provide a minimal shim using the stdlib
+# importlib.resources so the app starts regardless of build-cache state.
+if "pkg_resources" not in sys.modules:
+    try:
+        import pkg_resources  # already available — nothing to do
+    except ModuleNotFoundError:
+        import importlib.resources as _ir
+        _shim = types.ModuleType("pkg_resources")
+        def _resource_string(package_or_req, resource_name):
+            pkg = (package_or_req if isinstance(package_or_req, str)
+                   else package_or_req.__name__)
+            return _ir.files(pkg).joinpath(resource_name).read_bytes()
+        _shim.resource_string = _resource_string
+        sys.modules["pkg_resources"] = _shim
+
 from flask import Flask
 from flask_caching import Cache
 from flask_cors import CORS
