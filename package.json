@@ -50,8 +50,15 @@
     },
     "nsis": {
       "oneClick": false,
+      "perMachine": false,
       "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "runAfterFinish": true,
+      "installerIcon": "frontend/static/icons/icon-512.png",
+      "uninstallerIcon": "frontend/static/icons/icon-512.png",
+      "installerHeaderIcon": "frontend/static/icons/icon-512.png",
+      "shortcutName": "CoilMS"
     }
   }
 }

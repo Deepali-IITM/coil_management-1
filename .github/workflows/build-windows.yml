@@ -11,9 +11,11 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - name: Checkout
+      # ── 1. Source ─────────────────────────────────────────────────────────────
+      - name: Checkout repository
         uses: actions/checkout@v4
 
+      # ── 2. Runtimes ───────────────────────────────────────────────────────────
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
@@ -24,23 +26,60 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install Python dependencies + PyInstaller
+      # ── 3. Python deps + PyInstaller ─────────────────────────────────────────
+      - name: Install Python dependencies
         run: |
-          pip install --upgrade pip setuptools
+          python -m pip install --upgrade pip setuptools wheel
           pip install -r requirements.txt
           pip install pyinstaller
 
-      - name: Bundle Flask server with PyInstaller (spec file)
+      - name: Verify key Python imports
         run: |
-          pyinstaller coilms_server.spec
-          New-Item -ItemType Directory -Force -Path dist_server
-          Copy-Item dist\coilms_server.exe dist_server\
-          if (-not (Test-Path dist_server\coilms_server.exe)) {
-            Write-Error "coilms_server.exe not found after PyInstaller build"
+          python -c "import flask; print('flask', flask.__version__)"
+          python -c "import flask_security; print('flask_security OK')"
+          python -c "import flask_sqlalchemy; print('flask_sqlalchemy OK')"
+          python -c "import passlib; print('passlib OK')"
+          python -c "import bcrypt; print('bcrypt OK')"
+          python -c "import sqlalchemy; print('sqlalchemy', sqlalchemy.__version__)"
+
+      # ── 4. Bundle Flask with PyInstaller ─────────────────────────────────────
+      - name: Bundle Flask server (PyInstaller)
+        run: pyinstaller coilms_server.spec --clean
+
+      - name: Validate PyInstaller output
+        run: |
+          if (-not (Test-Path "dist\coilms_server.exe")) {
+            Write-Error "FATAL: dist\coilms_server.exe was not created"
             exit 1
           }
-          Write-Host "Bundle size: $((Get-Item dist_server\coilms_server.exe).Length / 1MB) MB"
+          $size = (Get-Item "dist\coilms_server.exe").Length
+          $sizeMB = [math]::Round($size / 1MB, 1)
+          Write-Host "Bundle: dist\coilms_server.exe  ($sizeMB MB)"
+          if ($size -lt 10MB) {
+            Write-Error "Bundle is suspiciously small ($sizeMB MB) — likely a bad build"
+            exit 1
+          }
 
+      - name: Smoke-test bundled server
+        shell: cmd
+        run: |
+          set PORT=19876
+          set ELECTRON_RUN=1
+          set DATABASE_URL=sqlite:///C:/Temp/coilms_test.sqlite3
+          set INSTANCE_PATH=C:/Temp
+          set PYTHONUTF8=1
+          set PYTHONIOENCODING=utf-8
+          start /B dist\coilms_server.exe
+          timeout /t 20 /nobreak > nul
+          curl -s -o nul -w "HTTP status: %%{http_code}" http://127.0.0.1:19876/ || (echo "Server did not respond" && exit 1)
+
+      - name: Stage server bundle for Electron
+        run: |
+          New-Item -ItemType Directory -Force -Path dist_server
+          Copy-Item dist\coilms_server.exe dist_server\
+          Write-Host "Staged: dist_server\coilms_server.exe"
+
+      # ── 5. Electron / NSIS installer ─────────────────────────────────────────
       - name: Install Node dependencies
         run: npm install
 
@@ -49,9 +88,32 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload installer artifact
+      - name: Validate Electron output
+        run: |
+          $exes = Get-ChildItem dist_electron\*.exe -ErrorAction SilentlyContinue
+          if (-not $exes) {
+            Write-Error "FATAL: No .exe found in dist_electron\"
+            exit 1
+          }
+          foreach ($f in $exes) {
+            $sizeMB = [math]::Round($f.Length / 1MB, 1)
+            Write-Host "Installer: $($f.Name)  ($sizeMB MB)"
+          }
+
+      # ── 6. Upload artifacts ───────────────────────────────────────────────────
+      - name: Upload Windows installer
         uses: actions/upload-artifact@v4
         with:
           name: CoilMS-Windows-Installer
           path: dist_electron/*.exe
           retention-days: 30
+
+      - name: Upload PyInstaller log (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pyinstaller-build-log
+          path: |
+            build/
+            dist/
+          retention-days: 7

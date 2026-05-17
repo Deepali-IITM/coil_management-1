@@ -49,10 +49,13 @@ def createApp():
     # Restrict to specific origins in local dev if needed.
     CORS(app, resources={r"/*": {"origins": "*"}})
 
-    # Config: use ProductionConfig on Render, LocalDevelopmentConfig elsewhere.
+    # Config: Render → ProductionConfig, Electron → ElectronConfig, else dev.
     if os.environ.get("RENDER"):
         from backend.config import ProductionConfig
         app.config.from_object(ProductionConfig)
+    elif os.environ.get("ELECTRON_RUN"):
+        from backend.config import ElectronConfig
+        app.config.from_object(ElectronConfig)
     else:
         from backend.config import LocalDevelopmentConfig
         app.config.from_object(LocalDevelopmentConfig)

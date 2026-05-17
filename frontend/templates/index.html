@@ -34,12 +34,14 @@
   <script src="{{ url_for('static', filename='vendor/bootstrap.bundle.min.js') }}"></script>
   <script src="{{ url_for('static', filename='vendor/chart.min.js') }}"></script>
 
-  <!-- Register service worker for offline-first support -->
+  <!-- Register service worker for offline-first PWA support.
+       Skip in Electron: Flask is always local so the SW only adds overhead
+       and can intercept ES module fetches before its cache is warm, causing
+       a blank white screen on first launch. -->
   <script>
-    if ('serviceWorker' in navigator) {
+    if ('serviceWorker' in navigator && !window.electronAPI) {
       navigator.serviceWorker.register('/static/sw.js', { scope: '/' })
         .then(reg => {
-          // Prompt reload when a new SW version is waiting
           reg.addEventListener('updatefound', () => {
             const nw = reg.installing;
             nw.addEventListener('statechange', () => {
