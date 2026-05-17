@@ -61,17 +61,41 @@ jobs:
           }
 
       - name: Smoke-test bundled server
-        shell: cmd
         run: |
-          set PORT=19876
-          set ELECTRON_RUN=1
-          set DATABASE_URL=sqlite:///C:/Temp/coilms_test.sqlite3
-          set INSTANCE_PATH=C:/Temp
-          set PYTHONUTF8=1
-          set PYTHONIOENCODING=utf-8
-          start /B dist\coilms_server.exe
-          timeout /t 20 /nobreak > nul
-          curl -s -o nul -w "HTTP status: %%{http_code}" http://127.0.0.1:19876/ || (echo "Server did not respond" && exit 1)
+          New-Item -ItemType Directory -Force -Path C:\Temp | Out-Null
+          $env:PORT                   = "19876"
+          $env:ELECTRON_RUN           = "1"
+          $env:DATABASE_URL           = "sqlite:///C:/Temp/coilms_test.sqlite3"
+          $env:INSTANCE_PATH          = "C:/Temp"
+          $env:PYTHONUTF8             = "1"
+          $env:PYTHONIOENCODING       = "utf-8"
+          $env:PYTHONDONTWRITEBYTECODE = "1"
+
+          $proc = Start-Process -FilePath "dist\coilms_server.exe" `
+                                -PassThru -WindowStyle Hidden
+          Write-Host "Server PID: $($proc.Id)"
+
+          $ready = $false
+          for ($i = 1; $i -le 40; $i++) {
+            Start-Sleep -Seconds 1
+            try {
+              $r = Invoke-WebRequest -Uri "http://127.0.0.1:19876/" `
+                                     -TimeoutSec 3 -UseBasicParsing -ErrorAction Stop
+              Write-Host "Server responded HTTP $($r.StatusCode) after ${i}s"
+              $ready = $true
+              break
+            } catch {
+              Write-Host "Waiting… (${i}s)"
+            }
+          }
+
+          Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+
+          if (-not $ready) {
+            Write-Error "Bundled server did not respond within 40 seconds"
+            exit 1
+          }
+          Write-Host "Smoke test passed."
 
       - name: Stage server bundle for Electron
         run: |
