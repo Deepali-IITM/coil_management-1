@@ -1,8 +1,14 @@
+import os
 from flask import current_app as app
 from flask_security import SQLAlchemyUserDatastore, hash_password
 from backend.models import db, Product, Party, Coil, Sale, SaleItem, SaleCoil
 from datetime import datetime
 from sqlalchemy import text
+
+# In Electron desktop builds, always re-hash the seeded accounts so that
+# bcrypt-version mismatches between PyInstaller builds can never lock users out.
+# Safe because there is no password-change UI for these two accounts.
+_IS_ELECTRON = bool(os.environ.get("ELECTRON_RUN"))
 
 with app.app_context():
     db.create_all()
@@ -25,15 +31,18 @@ with app.app_context():
     db.session.commit()
 
     # ── Super Admin ───────────────────────────────────────────────────────────
-    if not userdatastore.find_user(email="admin@coilms.in"):
-        userdatastore.create_user(
+    admin = userdatastore.find_user(email="admin@coilms.in")
+    if not admin:
+        admin = userdatastore.create_user(
             email="admin@coilms.in",
             password=hash_password("Admin@123"),
             roles=["admin"],
             full_name="Super Admin",
             role="admin",
         )
-        db.session.commit()
+    elif _IS_ELECTRON:
+        admin.password = hash_password("Admin@123")
+    db.session.commit()
 
     # ── Sample Coil Manager (owner) ───────────────────────────────────────────
     owner = userdatastore.find_user(email="owner@coilms.in")
@@ -46,7 +55,9 @@ with app.app_context():
             business_name="Demo Steel Works",
             role="owner",
         )
-        db.session.commit()
+    elif _IS_ELECTRON:
+        owner.password = hash_password("Owner@123")
+    db.session.commit()
 
     # ── Sample data linked to owner ───────────────────────────────────────────
     coil1 = Coil.query.filter_by(coil_number="C001", owner_id=owner.id).first()
